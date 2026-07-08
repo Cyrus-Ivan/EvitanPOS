@@ -10,8 +10,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Category, Item, Paginated } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { FolderCog, Package, Pencil } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ChevronRight, FolderCog, Package, Pencil } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Inventory', href: '/inventory' }];
 
@@ -42,12 +42,20 @@ export default function InventoryIndex({
     categories: Pick<Category, 'id' | 'name'>[];
     filters: Filters;
 }) {
-    const { hasRoleAtLeast } = usePermissions();
+    const { hasRoleAtLeast, can } = usePermissions();
     const confirm = useConfirm();
     const canManage = hasRoleAtLeast('admin');
+    const canViewCost = can('view-item-cost');
 
     const [search, setSearch] = useState(filters.search ?? '');
+    // Only one item's variant panel is open at a time.
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const isFirstRender = useRef(true);
+
+    const toggleExpanded = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
+
+    // Number of columns the variant detail row must span.
+    const columnCount = 6 + (canManage ? 1 : 0) + 1;
 
     const applyFilters = (next: Partial<Filters>) => {
         const merged = { search, category: filters.category, status: filters.status, ...next };
@@ -160,6 +168,7 @@ export default function InventoryIndex({
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-10" />
                                     <TableHead>Name</TableHead>
                                     <TableHead>Category</TableHead>
                                     <TableHead>Unit</TableHead>
@@ -170,38 +179,100 @@ export default function InventoryIndex({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {items.data.map((item) => (
-                                    <TableRow key={item.id}>
-                                        <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell>{item.category?.name ?? '—'}</TableCell>
-                                        <TableCell>{item.unit}</TableCell>
-                                        <TableCell>{item.variants?.length ?? 0}</TableCell>
-                                        <TableCell>{priceLabel(item)}</TableCell>
-                                        <TableCell>
-                                            {item.archived_at ? <Badge variant="secondary">Archived</Badge> : <Badge>Active</Badge>}
-                                        </TableCell>
-                                        {canManage && (
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-1">
-                                                    <Button variant="ghost" size="sm" asChild>
-                                                        <Link href={route('items.edit', item.id)}>
-                                                            <Pencil className="size-4" /> Edit
-                                                        </Link>
-                                                    </Button>
-                                                    {item.archived_at ? (
-                                                        <Button variant="ghost" size="sm" onClick={() => restoreItem(item)}>
-                                                            Restore
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="ghost" size="sm" onClick={() => archiveItem(item)}>
-                                                            Archive
+                                {items.data.map((item) => {
+                                    const variants = item.variants ?? [];
+                                    const isExpanded = expandedId === item.id;
+                                    const hasVariants = variants.length > 0;
+
+                                    return (
+                                        <Fragment key={item.id}>
+                                            <TableRow>
+                                                <TableCell className="w-10">
+                                                    {hasVariants && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="size-7"
+                                                            aria-label={isExpanded ? 'Hide variants' : 'Show variants'}
+                                                            aria-expanded={isExpanded}
+                                                            onClick={() => toggleExpanded(item.id)}
+                                                        >
+                                                            <ChevronRight
+                                                                className={`size-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                                            />
                                                         </Button>
                                                     )}
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))}
+                                                </TableCell>
+                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell>{item.category?.name ?? '—'}</TableCell>
+                                                <TableCell>{item.unit}</TableCell>
+                                                <TableCell>{variants.length}</TableCell>
+                                                <TableCell>{priceLabel(item)}</TableCell>
+                                                <TableCell>
+                                                    {item.archived_at ? <Badge variant="secondary">Archived</Badge> : <Badge>Active</Badge>}
+                                                </TableCell>
+                                                {canManage && (
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-1">
+                                                            <Button variant="ghost" size="sm" asChild>
+                                                                <Link href={route('items.edit', item.id)}>
+                                                                    <Pencil className="size-4" /> Edit
+                                                                </Link>
+                                                            </Button>
+                                                            {item.archived_at ? (
+                                                                <Button variant="ghost" size="sm" onClick={() => restoreItem(item)}>
+                                                                    Restore
+                                                                </Button>
+                                                            ) : (
+                                                                <Button variant="ghost" size="sm" onClick={() => archiveItem(item)}>
+                                                                    Archive
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                            {isExpanded && (
+                                                <TableRow className="hover:bg-transparent">
+                                                    <TableCell colSpan={columnCount} className="bg-muted/30 p-0">
+                                                        <div className="px-4 py-3">
+                                                            <Table className="w-auto">
+                                                                <TableHeader>
+                                                                    <TableRow className="hover:bg-transparent">
+                                                                        <TableHead className="pr-8">Variant</TableHead>
+                                                                        <TableHead className="pr-8">SKU</TableHead>
+                                                                        <TableHead className="pr-8">Barcode</TableHead>
+                                                                        <TableHead className="pr-8 text-right">Price</TableHead>
+                                                                        {canViewCost && <TableHead className="pr-8 text-right">Cost</TableHead>}
+                                                                        <TableHead className="text-right">Low-stock alert</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {variants.map((variant) => (
+                                                                        <TableRow key={variant.id} className="hover:bg-transparent">
+                                                                            <TableCell className="pr-8 font-medium">{variant.name}</TableCell>
+                                                                            <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
+                                                                            <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
+                                                                            <TableCell className="pr-8 text-right tabular-nums">
+                                                                                {Number(variant.selling_price).toFixed(2)}
+                                                                            </TableCell>
+                                                                            {canViewCost && (
+                                                                                <TableCell className="pr-8 text-right tabular-nums">
+                                                                                    {variant.cost != null ? Number(variant.cost).toFixed(2) : '—'}
+                                                                                </TableCell>
+                                                                            )}
+                                                                            <TableCell className="text-right tabular-nums">{variant.low_stock_threshold}</TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                </TableBody>
+                                                            </Table>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </Fragment>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </div>
