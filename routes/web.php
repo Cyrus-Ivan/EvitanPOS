@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BusinessSettingsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -25,7 +26,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Owner-only.
     Route::middleware('role:owner')->group(function () {
-        Route::inertia('business-settings', 'business-settings')->name('business-settings'); // Phase 4
+        Route::get('business-settings', [BusinessSettingsController::class, 'edit'])->name('business-settings');      // Phase 4
+        Route::patch('business-settings', [BusinessSettingsController::class, 'update'])->name('business-settings.update');
         Route::inertia('backup', 'backup')->name('backup');                                  // Phase 16
     });
 });
