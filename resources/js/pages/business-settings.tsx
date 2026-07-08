@@ -17,6 +17,7 @@ interface BusinessSettingsData {
     business_address: string;
     tin: string;
     receipt_footer: string;
+    [key: string]: string;
 }
 
 export default function BusinessSettings({ settings }: { settings: BusinessSettingsData }) {
