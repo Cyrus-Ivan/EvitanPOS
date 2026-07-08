@@ -1,0 +1,309 @@
+import HeadingSmall from '@/components/heading-small';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { usePermissions } from '@/hooks/use-permissions';
+import type { Category, Item } from '@/types';
+import { Transition } from '@headlessui/react';
+import { useForm } from '@inertiajs/react';
+import { Plus, Trash2 } from 'lucide-react';
+import { FormEventHandler } from 'react';
+
+// Declared as `type` (not `interface`) so they satisfy Inertia's
+// Record<string, FormDataConvertible> constraint on useForm.
+type VariantRow = {
+    id?: string;
+    name: string;
+    sku: string;
+    barcode: string;
+    selling_price: string;
+    low_stock_threshold: string;
+    cost: string;
+};
+
+type ItemFormData = {
+    name: string;
+    unit: string;
+    category_id: string;
+    description: string;
+    variants: VariantRow[];
+};
+
+const NO_CATEGORY = 'none';
+
+function blankVariant(): VariantRow {
+    return { name: '', sku: '', barcode: '', selling_price: '', low_stock_threshold: '0', cost: '' };
+}
+
+function toRow(variant: NonNullable<Item['variants']>[number]): VariantRow {
+    return {
+        id: variant.id,
+        name: variant.name ?? '',
+        sku: variant.sku ?? '',
+        barcode: variant.barcode ?? '',
+        selling_price: variant.selling_price ?? '',
+        low_stock_threshold: String(variant.low_stock_threshold ?? 0),
+        cost: variant.cost ?? '',
+    };
+}
+
+/**
+ * Shared create/edit form for an Item and its Variants. Removing a saved variant
+ * simply drops it from the submitted array; the server archives it (never
+ * deletes). The Item Cost column renders only for the Owner.
+ */
+export default function ItemForm({ item, categories }: { item?: Item; categories: Pick<Category, 'id' | 'name'>[] }) {
+    const { can } = usePermissions();
+    const canViewCost = can('view-item-cost');
+    const isEdit = Boolean(item);
+
+    const form = useForm<ItemFormData>({
+        name: item?.name ?? '',
+        unit: item?.unit ?? '',
+        category_id: item?.category_id ?? NO_CATEGORY,
+        description: item?.description ?? '',
+        variants: item?.variants?.length ? item.variants.map(toRow) : [blankVariant()],
+    });
+
+    const { data, setData, errors, processing, recentlySuccessful } = form;
+
+    // Nested error keys (e.g. "variants.0.sku") fall outside the typed top-level
+    // keys, so read them through a loosely-typed view of the same object.
+    const err = errors as Record<string, string | undefined>;
+
+    const setVariant = (index: number, field: keyof VariantRow, value: string) => {
+        setData(
+            'variants',
+            data.variants.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+        );
+    };
+
+    const addVariant = () => setData('variants', [...data.variants, blankVariant()]);
+
+    const removeVariant = (index: number) =>
+        setData(
+            'variants',
+            data.variants.filter((_, i) => i !== index),
+        );
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+
+        form.transform((payload) => ({
+            ...payload,
+            category_id: payload.category_id === NO_CATEGORY ? '' : payload.category_id,
+            variants: (payload.variants as VariantRow[]).map((row) => {
+                const variant: Record<string, unknown> = {
+                    name: row.name,
+                    sku: row.sku,
+                    barcode: row.barcode,
+                    selling_price: row.selling_price,
+                    low_stock_threshold: row.low_stock_threshold,
+                };
+                if (row.id) {
+                    variant.id = row.id;
+                }
+                // Only the Owner may send cost; the server strips it regardless.
+                if (canViewCost) {
+                    variant.cost = row.cost;
+                }
+                return variant;
+            }),
+        }));
+
+        if (isEdit && item) {
+            form.patch(route('items.update', item.id), { preserveScroll: true });
+        } else {
+            form.post(route('items.store'), { preserveScroll: true });
+        }
+    };
+
+    return (
+        <form onSubmit={submit} className="max-w-3xl space-y-8">
+            <section className="space-y-4">
+                <HeadingSmall title="Item details" description="Products your store sells. Stock, price, and SKU live on the variants below." />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                            id="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            required
+                            placeholder="e.g. Coca-Cola 1.5L"
+                        />
+                        <InputError message={errors.name} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="unit">Unit</Label>
+                        <Input
+                            id="unit"
+                            value={data.unit}
+                            onChange={(e) => setData('unit', e.target.value)}
+                            required
+                            placeholder="e.g. pc, kg, box"
+                        />
+                        <InputError message={errors.unit} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="category_id">Category</Label>
+                        <Select value={data.category_id} onValueChange={(value) => setData('category_id', value)}>
+                            <SelectTrigger id="category_id">
+                                <SelectValue placeholder="No category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={NO_CATEGORY}>No category</SelectItem>
+                                {categories.map((category) => (
+                                    <SelectItem key={category.id} value={category.id}>
+                                        {category.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.category_id} />
+                    </div>
+
+                    <div className="grid gap-2 sm:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                            id="description"
+                            value={data.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                            placeholder="Optional notes about this item"
+                        />
+                        <InputError message={errors.description} />
+                    </div>
+                </div>
+            </section>
+
+            <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <HeadingSmall title="Variants" description="Every item needs at least one variant." />
+                    <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                        <Plus className="size-4" /> Add variant
+                    </Button>
+                </div>
+
+                {/* The `variants` array error (e.g. "at least one required") surfaces here. */}
+                <InputError message={errors.variants} />
+
+                <div className="space-y-4">
+                    {data.variants.map((variant, index) => (
+                        <div key={variant.id ?? index} className="rounded-lg border p-4">
+                            <div className="mb-3 flex items-center justify-between">
+                                <span className="text-muted-foreground text-sm font-medium">Variant {index + 1}</span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeVariant(index)}
+                                    disabled={data.variants.length === 1}
+                                    title={data.variants.length === 1 ? 'An item must keep at least one variant' : 'Remove variant'}
+                                >
+                                    <Trash2 className="size-4" />
+                                </Button>
+                            </div>
+
+                            <div className={`grid gap-3 ${canViewCost ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`variant-${index}-name`}>Name</Label>
+                                    <Input
+                                        id={`variant-${index}-name`}
+                                        value={variant.name}
+                                        onChange={(e) => setVariant(index, 'name', e.target.value)}
+                                        placeholder="e.g. Default, Small"
+                                    />
+                                    <InputError message={err[`variants.${index}.name`]} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`variant-${index}-sku`}>SKU</Label>
+                                    <Input
+                                        id={`variant-${index}-sku`}
+                                        value={variant.sku}
+                                        onChange={(e) => setVariant(index, 'sku', e.target.value)}
+                                        placeholder="Optional"
+                                    />
+                                    <InputError message={err[`variants.${index}.sku`]} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`variant-${index}-barcode`}>Barcode</Label>
+                                    <Input
+                                        id={`variant-${index}-barcode`}
+                                        value={variant.barcode}
+                                        onChange={(e) => setVariant(index, 'barcode', e.target.value)}
+                                        placeholder="Optional"
+                                    />
+                                    <InputError message={err[`variants.${index}.barcode`]} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`variant-${index}-price`}>Selling price</Label>
+                                    <Input
+                                        id={`variant-${index}-price`}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={variant.selling_price}
+                                        onChange={(e) => setVariant(index, 'selling_price', e.target.value)}
+                                        required
+                                    />
+                                    <InputError message={err[`variants.${index}.selling_price`]} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`variant-${index}-threshold`}>Low-stock threshold</Label>
+                                    <Input
+                                        id={`variant-${index}-threshold`}
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        value={variant.low_stock_threshold}
+                                        onChange={(e) => setVariant(index, 'low_stock_threshold', e.target.value)}
+                                    />
+                                    <InputError message={err[`variants.${index}.low_stock_threshold`]} />
+                                </div>
+
+                                {canViewCost && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor={`variant-${index}-cost`}>Cost</Label>
+                                        <Input
+                                            id={`variant-${index}-cost`}
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={variant.cost}
+                                            onChange={(e) => setVariant(index, 'cost', e.target.value)}
+                                            placeholder="Owner only"
+                                        />
+                                        <InputError message={err[`variants.${index}.cost`]} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            <div className="flex items-center gap-4">
+                <Button disabled={processing}>{isEdit ? 'Save changes' : 'Create item'}</Button>
+                <Transition
+                    show={recentlySuccessful}
+                    enter="transition ease-in-out"
+                    enterFrom="opacity-0"
+                    leave="transition ease-in-out"
+                    leaveTo="opacity-0"
+                >
+                    <p className="text-sm text-neutral-600">Saved</p>
+                </Transition>
+            </div>
+        </form>
+    );
+}
