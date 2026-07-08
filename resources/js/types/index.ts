@@ -36,12 +36,14 @@ export interface SharedData {
     [key: string]: unknown;
 }
 
+export type UserRole = 'owner' | 'admin' | 'cashier';
+
 export interface User {
-    id: number;
+    id: string;
     name: string;
-    email: string;
+    username: string;
+    role: UserRole;
     avatar?: string;
-    email_verified_at: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
