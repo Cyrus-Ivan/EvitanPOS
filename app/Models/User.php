@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Exceptions\CannotDeleteOwnerException;
 use App\Models\Concerns\HasUuidPrimaryKey;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -48,5 +50,31 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
+    }
+
+    /**
+     * Guard the "Owner can never be archived or deleted" invariant at the model
+     * layer, so no code path (soft or force delete) can remove the Owner.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            if ($user->role === UserRole::Owner) {
+                throw new CannotDeleteOwnerException;
+            }
+        });
+    }
+
+    /**
+     * @return HasMany<LoginHistory, $this>
+     */
+    public function loginHistories(): HasMany
+    {
+        return $this->hasMany(LoginHistory::class);
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === UserRole::Owner;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LoginEventType;
 use App\Models\Concerns\HasUuidPrimaryKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,7 @@ class LoginHistory extends Model
     protected function casts(): array
     {
         return [
+            'event_type' => LoginEventType::class,
             'occurred_at' => 'datetime',
             'created_at' => 'datetime',
         ];

@@ -45,6 +45,14 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        // The Owner can never be deleted (also guarded at the model layer).
+        if ($user->isOwner()) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'The Owner account cannot be deleted.',
+            ]);
+        }
+
         Auth::logout();
 
         $user->delete();
