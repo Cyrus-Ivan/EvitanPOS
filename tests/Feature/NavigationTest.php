@@ -12,8 +12,9 @@ class NavigationTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Every Phase 0 navigation section. These are placeholder pages for now;
-     * role-based authorization is added in Phase 3.
+     * Every navigation section. Role-based authorization (Phase 3) is exercised
+     * in AuthorizationTest; here we only assert each section is reachable by a
+     * user with full access (the Owner).
      *
      * @return array<string, array{string}>
      */
@@ -39,9 +40,9 @@ class NavigationTest extends TestCase
     }
 
     #[DataProvider('sectionRoutes')]
-    public function test_authenticated_users_can_visit_each_section(string $routeName)
+    public function test_the_owner_can_visit_each_section(string $routeName)
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->owner()->create());
 
         $this->get(route($routeName))->assertOk();
     }

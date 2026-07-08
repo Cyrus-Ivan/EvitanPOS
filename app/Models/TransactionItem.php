@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use App\Models\Concerns\HidesCostFromNonOwners;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TransactionItem extends Model
 {
-    use HasUuidPrimaryKey;
+    use HasUuidPrimaryKey, HidesCostFromNonOwners;
 
     /** @var list<string> */
     protected $fillable = [

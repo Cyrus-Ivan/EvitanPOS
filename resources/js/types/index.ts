@@ -1,7 +1,16 @@
 import { LucideIcon } from 'lucide-react';
 
+export type Permission =
+    | 'access-reports'
+    | 'access-audit-logs'
+    | 'manage-users'
+    | 'access-settings'
+    | 'access-backup'
+    | 'view-item-cost';
+
 export interface Auth {
     user: User;
+    permissions: Record<Permission, boolean>;
 }
 
 export interface BreadcrumbItem {
@@ -19,6 +28,8 @@ export interface NavItem {
     url: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    // Minimum role required to see this item. Omit for Cashier-level (everyone).
+    minRole?: UserRole;
 }
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
@@ -40,7 +51,7 @@ export type UserRole = 'owner' | 'admin' | 'cashier';
 
 export interface User {
     id: string;
-    name: string;
+    name: string | null;
     username: string;
     role: UserRole;
     avatar?: string;

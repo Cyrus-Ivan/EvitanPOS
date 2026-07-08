@@ -77,4 +77,23 @@ class User extends Authenticatable
     {
         return $this->role === UserRole::Owner;
     }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
+    }
+
+    public function isCashier(): bool
+    {
+        return $this->role === UserRole::Cashier;
+    }
+
+    /**
+     * Whether this user's role clears a minimum-role requirement, honouring the
+     * Owner > Admin > Cashier hierarchy.
+     */
+    public function hasRoleAtLeast(UserRole $role): bool
+    {
+        return $this->role->atLeast($role);
+    }
 }

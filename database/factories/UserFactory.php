@@ -43,4 +43,24 @@ class UserFactory extends Factory
             'role' => UserRole::Owner,
         ]);
     }
+
+    /**
+     * Indicate that the user is an Admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Admin,
+        ]);
+    }
+
+    /**
+     * Indicate that the user is a Cashier (also the default role).
+     */
+    public function cashier(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Cashier,
+        ]);
+    }
 }

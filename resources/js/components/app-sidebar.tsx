@@ -1,26 +1,40 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
+import { type NavGroup } from '@/types';
 import { Link } from '@inertiajs/react';
 import { ChartColumn, DatabaseBackup, History, LayoutGrid, Package, ReceiptText, ScrollText, ShoppingCart, Store, UsersRound } from 'lucide-react';
 import AppLogo from './app-logo';
 
-// Full navigation surface. Role-based visibility (Cashier / Admin / Owner) is
-// intentionally NOT enforced yet — that lands in Phase 3 (Authorization). The
-// trailing comment on each item records its intended minimum role so the gating
-// pass has a reference.
-const mainNavItems: NavItem[] = [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid }, // Cashier
-    { title: 'Point of Sale', url: '/pos', icon: ShoppingCart }, // Cashier
-    { title: 'Sales', url: '/sales', icon: ReceiptText }, // Cashier
-    { title: 'Inventory', url: '/inventory', icon: Package }, // Cashier (view)
-    { title: 'Reports', url: '/reports', icon: ChartColumn }, // Admin
-    { title: 'User Management', url: '/users', icon: UsersRound }, // Admin
-    { title: 'Login History', url: '/login-history', icon: History }, // Cashier (own)
-    { title: 'Audit Logs', url: '/audit-logs', icon: ScrollText }, // Admin
-    { title: 'Business Settings', url: '/business-settings', icon: Store }, // Owner
-    { title: 'Database Backup', url: '/backup', icon: DatabaseBackup }, // Owner
+// Full navigation surface, grouped by function. Each item carries the minimum
+// role required to see it (omitted = Cashier-level, visible to everyone).
+// NavMain filters these against the current user's role (see use-permissions).
+const mainNavGroups: NavGroup[] = [
+    {
+        title: 'Operations',
+        items: [
+            { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
+            { title: 'Point of Sale', url: '/pos', icon: ShoppingCart },
+            { title: 'Sales', url: '/sales', icon: ReceiptText },
+            { title: 'Inventory', url: '/inventory', icon: Package }, // view-only for Cashier
+        ],
+    },
+    {
+        title: 'Insights',
+        items: [
+            { title: 'Reports', url: '/reports', icon: ChartColumn, minRole: 'admin' },
+            { title: 'Login History', url: '/login-history', icon: History }, // Cashier sees own
+            { title: 'Audit Logs', url: '/audit-logs', icon: ScrollText, minRole: 'admin' },
+        ],
+    },
+    {
+        title: 'Administration',
+        items: [
+            { title: 'User Management', url: '/users', icon: UsersRound, minRole: 'admin' },
+            { title: 'Business Settings', url: '/business-settings', icon: Store, minRole: 'owner' },
+            { title: 'Database Backup', url: '/backup', icon: DatabaseBackup, minRole: 'owner' },
+        ],
+    },
 ];
 
 export function AppSidebar() {
@@ -39,7 +53,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={mainNavGroups} />
             </SidebarContent>
 
             <SidebarFooter>
