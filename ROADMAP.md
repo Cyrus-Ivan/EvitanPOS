@@ -433,9 +433,11 @@ Features
 
 Create User
 
-Archive User
+Archive User (soft delete; restorable)
 
-Reset Password
+Reset Password (also signs the target out — forced_logout)
+
+Update Role (name is immutable after creation)
 
 Permissions
 
