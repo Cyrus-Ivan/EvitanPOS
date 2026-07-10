@@ -7,6 +7,10 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
     const page = usePage();
     const { hasRoleAtLeast } = usePermissions();
 
+    // Match on pathname only so query strings (e.g. a pre-filtered
+    // ?variant=… on Stock History) don't drop the active highlight.
+    const currentPath = page.url.split('?')[0];
+
     // Gate every item by its minimum role, then drop any group left empty.
     const visibleGroups = groups
         .map((group) => ({
@@ -23,7 +27,7 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
                     <SidebarMenu>
                         {group.items.map((item) => (
                             <SidebarMenuItem key={item.title}>
-                                <SidebarMenuButton asChild isActive={item.url === page.url}>
+                                <SidebarMenuButton asChild isActive={item.url === currentPath}>
                                     <Link href={item.url} prefetch>
                                         {item.icon && <item.icon />}
                                         <span>{item.title}</span>

@@ -6,10 +6,12 @@ use App\Models\Concerns\HasUuidPrimaryKey;
 use App\Models\Concerns\HidesCostFromNonOwners;
 use Database\Factories\VariantFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Variant extends Model
 {
@@ -60,6 +62,29 @@ class Variant extends Model
     public function transactionItems(): HasMany
     {
         return $this->hasMany(TransactionItem::class);
+    }
+
+    /**
+     * Denormalized current-stock cache, maintained by StockLedger.
+     *
+     * @return HasOne<StockSnapshot, $this>
+     */
+    public function stockSnapshot(): HasOne
+    {
+        return $this->hasOne(StockSnapshot::class);
+    }
+
+    /**
+     * Current on-hand quantity from the snapshot (0 when never stocked). Reads
+     * the eager-loaded relation when present to avoid an extra query per row.
+     *
+     * @return Attribute<int, never>
+     */
+    protected function currentStock(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): int => (int) ($this->stockSnapshot?->quantity ?? 0),
+        )->shouldCache();
     }
 
     /**

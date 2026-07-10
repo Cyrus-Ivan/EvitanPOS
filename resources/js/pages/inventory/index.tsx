@@ -1,5 +1,6 @@
 import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
+import StockAdjustDialog from '@/components/inventory/stock-adjust-dialog';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePermissions } from '@/hooks/use-permissions';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem, Category, Item, Paginated } from '@/types';
+import type { BreadcrumbItem, Category, Item, Paginated, Variant } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronRight, FolderCog, Package, Pencil } from 'lucide-react';
+import { ChevronRight, FolderCog, History, Package, Pencil, SlidersHorizontal } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Inventory', href: '/inventory' }];
@@ -50,6 +51,8 @@ export default function InventoryIndex({
     const [search, setSearch] = useState(filters.search ?? '');
     // Only one item's variant panel is open at a time.
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    // The variant currently open in the stock-adjust dialog (with its item name).
+    const [adjustTarget, setAdjustTarget] = useState<{ variant: Variant; itemName: string } | null>(null);
     const isFirstRender = useRef(true);
 
     const toggleExpanded = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
@@ -132,18 +135,25 @@ export default function InventoryIndex({
                         </Select>
                     </div>
 
-                    {canManage && (
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" asChild>
-                                <Link href={route('categories.index')}>
-                                    <FolderCog className="size-4" /> Manage categories
-                                </Link>
-                            </Button>
-                            <Button asChild>
-                                <Link href={route('items.create')}>New item</Link>
-                            </Button>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href={route('stock-history.index')}>
+                                <History className="size-4" /> Stock history
+                            </Link>
+                        </Button>
+                        {canManage && (
+                            <>
+                                <Button variant="outline" asChild>
+                                    <Link href={route('categories.index')}>
+                                        <FolderCog className="size-4" /> Manage categories
+                                    </Link>
+                                </Button>
+                                <Button asChild>
+                                    <Link href={route('items.create')}>New item</Link>
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {items.data.length === 0 ? (
@@ -244,26 +254,64 @@ export default function InventoryIndex({
                                                                         <TableHead className="pr-8">Barcode</TableHead>
                                                                         <TableHead className="pr-8 text-right">Price</TableHead>
                                                                         {canViewCost && <TableHead className="pr-8 text-right">Cost</TableHead>}
-                                                                        <TableHead className="text-right">Low-stock alert</TableHead>
+                                                                        <TableHead className="pr-8 text-right">Stock</TableHead>
+                                                                        <TableHead className="pr-8 text-right">Low-stock alert</TableHead>
+                                                                        {canManage && <TableHead className="text-right">Actions</TableHead>}
                                                                     </TableRow>
                                                                 </TableHeader>
                                                                 <TableBody>
-                                                                    {variants.map((variant) => (
-                                                                        <TableRow key={variant.id} className="hover:bg-transparent">
-                                                                            <TableCell className="pr-8 font-medium">{variant.name}</TableCell>
-                                                                            <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
-                                                                            <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
-                                                                            <TableCell className="pr-8 text-right tabular-nums">
-                                                                                {Number(variant.selling_price).toFixed(2)}
-                                                                            </TableCell>
-                                                                            {canViewCost && (
+                                                                    {variants.map((variant) => {
+                                                                        const stock = variant.current_stock ?? 0;
+                                                                        const isLow = stock <= variant.low_stock_threshold;
+                                                                        return (
+                                                                            <TableRow key={variant.id} className="hover:bg-transparent">
+                                                                                <TableCell className="pr-8 font-medium">{variant.name}</TableCell>
+                                                                                <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
+                                                                                <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
                                                                                 <TableCell className="pr-8 text-right tabular-nums">
-                                                                                    {variant.cost != null ? Number(variant.cost).toFixed(2) : '—'}
+                                                                                    {Number(variant.selling_price).toFixed(2)}
                                                                                 </TableCell>
-                                                                            )}
-                                                                            <TableCell className="text-right tabular-nums">{variant.low_stock_threshold}</TableCell>
-                                                                        </TableRow>
-                                                                    ))}
+                                                                                {canViewCost && (
+                                                                                    <TableCell className="pr-8 text-right tabular-nums">
+                                                                                        {variant.cost != null ? Number(variant.cost).toFixed(2) : '—'}
+                                                                                    </TableCell>
+                                                                                )}
+                                                                                <TableCell className="pr-8 text-right">
+                                                                                    <span className="inline-flex items-center gap-2 tabular-nums">
+                                                                                        {stock}
+                                                                                        {isLow && (
+                                                                                            <Badge variant="destructive" className="font-normal">
+                                                                                                Low
+                                                                                            </Badge>
+                                                                                        )}
+                                                                                    </span>
+                                                                                </TableCell>
+                                                                                <TableCell className="pr-8 text-right tabular-nums">
+                                                                                    {variant.low_stock_threshold}
+                                                                                </TableCell>
+                                                                                {canManage && (
+                                                                                    <TableCell className="text-right">
+                                                                                        <div className="flex justify-end gap-1">
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                onClick={() => setAdjustTarget({ variant, itemName: item.name })}
+                                                                                            >
+                                                                                                <SlidersHorizontal className="size-4" /> Adjust
+                                                                                            </Button>
+                                                                                            <Button variant="ghost" size="sm" asChild>
+                                                                                                <Link
+                                                                                                    href={route('stock-history.index', { variant: variant.id })}
+                                                                                                >
+                                                                                                    <History className="size-4" /> History
+                                                                                                </Link>
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    </TableCell>
+                                                                                )}
+                                                                            </TableRow>
+                                                                        );
+                                                                    })}
                                                                 </TableBody>
                                                             </Table>
                                                         </div>
@@ -280,6 +328,15 @@ export default function InventoryIndex({
 
                 <Pagination links={items.links} />
             </div>
+
+            {canManage && (
+                <StockAdjustDialog
+                    open={adjustTarget !== null}
+                    onOpenChange={(open) => !open && setAdjustTarget(null)}
+                    variant={adjustTarget?.variant ?? null}
+                    itemName={adjustTarget?.itemName}
+                />
+            )}
         </AppLayout>
     );
 }

@@ -28,7 +28,7 @@ class ItemController extends Controller
         $items = Item::query()
             ->with([
                 'category:id,name',
-                'variants' => fn ($query) => $query->active()->orderBy('created_at'),
+                'variants' => fn ($query) => $query->active()->with('stockSnapshot')->orderBy('created_at'),
             ])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -45,6 +45,11 @@ class ItemController extends Controller
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
+
+        // Surface current stock (from the eager-loaded snapshot) on each variant.
+        $items->getCollection()->each(
+            fn (Item $item) => $item->variants->each->append('current_stock'),
+        );
 
         return Inertia::render('inventory/index', [
             'items' => $items,

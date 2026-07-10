@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use Database\Factories\InventoryLedgerFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,7 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class InventoryLedger extends Model
 {
-    use HasUuidPrimaryKey;
+    /** @use HasFactory<InventoryLedgerFactory> */
+    use HasFactory, HasUuidPrimaryKey;
 
     protected $table = 'inventory_ledger';
 

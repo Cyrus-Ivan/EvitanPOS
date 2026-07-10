@@ -4,6 +4,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Inventory\ItemController;
+use App\Http\Controllers\Inventory\StockAdjustmentController;
+use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,10 @@ Route::middleware(['auth'])->group(function () {
     // the request/model layer, not here.
     Route::get('inventory', [ItemController::class, 'index'])->name('inventory');
     Route::get('inventory/categories', [CategoryController::class, 'index'])->name('categories.index');
+    // Stock history (Phase 6) — read-only ledger view; the ledger carries no
+    // cost, so it is Cashier-level. Literal segment, declared before the
+    // {item} wildcard writes below.
+    Route::get('inventory/stock-history', [StockHistoryController::class, 'index'])->name('stock-history.index');
 
     // Admin-level: Admins and the Owner.
     Route::middleware('role:admin')->group(function () {
@@ -49,6 +55,9 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('inventory/{item}', [ItemController::class, 'update'])->name('items.update');
         Route::patch('inventory/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
         Route::patch('inventory/{item}/restore', [ItemController::class, 'restore'])->name('items.restore');
+
+        // Manual stock adjustment (Phase 6). Writes an inventory_ledger entry.
+        Route::post('inventory/variants/{variant}/stock', [StockAdjustmentController::class, 'store'])->name('stock.adjust');
 
         Route::post('inventory/categories', [CategoryController::class, 'store'])->name('categories.store');
         Route::patch('inventory/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');

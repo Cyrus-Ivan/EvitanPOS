@@ -62,6 +62,9 @@ export interface Variant {
     // Present only for the Owner — stripped server-side for everyone else.
     cost?: string | null;
     low_stock_threshold: number;
+    // Current on-hand from the stock snapshot; present where the controller
+    // eager-loads it (e.g. the inventory list). Absent elsewhere.
+    current_stock?: number;
     archived_at: string | null;
     created_at: string;
     updated_at: string;
@@ -90,6 +93,20 @@ export interface LoginHistoryEntry {
     created_at: string;
     notes: string | null;
     user: Pick<User, 'id' | 'name' | 'username'> | null;
+}
+
+// A row from the append-only inventory ledger (Phase 6, stock history view).
+export interface StockLedgerEntry {
+    id: string;
+    quantity: number;
+    resulting_snapshot: number;
+    type: 'sale' | 'stock_adjustment';
+    sale_type: 'sale' | 'return' | 'defect' | null;
+    reference_type: string;
+    notes: string | null;
+    created_at: string;
+    variant: { id: string; name: string; item: string | null } | null;
+    performed_by: string | null;
 }
 
 export interface PaginationLink {
