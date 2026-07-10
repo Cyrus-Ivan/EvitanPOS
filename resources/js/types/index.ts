@@ -80,6 +80,18 @@ export interface Item {
     updated_at: string;
 }
 
+export type LoginEventType = 'login' | 'logout' | 'window_closed' | 'application_crash' | 'power_loss' | 'forced_logout';
+
+// A row from the append-only login history (Phase 14, display only).
+export interface LoginHistoryEntry {
+    id: string;
+    event_type: LoginEventType;
+    occurred_at: string | null;
+    created_at: string;
+    notes: string | null;
+    user: Pick<User, 'id' | 'name' | 'username'> | null;
+}
+
 export interface PaginationLink {
     url: string | null;
     label: string;

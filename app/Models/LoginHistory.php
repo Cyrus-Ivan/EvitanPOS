@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\LoginEventType;
 use App\Models\Concerns\HasUuidPrimaryKey;
+use Database\Factories\LoginHistoryFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,7 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class LoginHistory extends Model
 {
-    use HasUuidPrimaryKey;
+    /** @use HasFactory<LoginHistoryFactory> */
+    use HasFactory, HasUuidPrimaryKey;
 
     protected $table = 'login_history';
 

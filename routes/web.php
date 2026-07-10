@@ -3,6 +3,7 @@
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Inventory\ItemController;
+use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,7 +18,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
     Route::inertia('pos', 'pos')->name('pos');                                          // Phase 8
     Route::inertia('sales', 'sales')->name('sales');                                    // Phase 9
-    Route::inertia('login-history', 'login-history')->name('login-history');            // Phase 14
+    Route::get('login-history', [LoginHistoryController::class, 'index'])->name('login-history');  // Phase 14
 
     // Inventory (Phase 5). Viewing is Cashier-level (read-only); every write is
     // gated to Admin+ below. Item Cost is further restricted to the Owner inside
