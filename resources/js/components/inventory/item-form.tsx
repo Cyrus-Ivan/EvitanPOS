@@ -104,7 +104,13 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
         );
     };
 
-    const addVariant = () => setData('variants', [...data.variants, blankVariant()]);
+    // Adding a variant also switches to multi-variant mode, which is how a
+    // "no variant" item gets converted: the lone unnamed variant gains a Name
+    // field and the new row appears alongside it.
+    const addVariant = () => {
+        setHasVariants(true);
+        setData('variants', [...data.variants, blankVariant()]);
+    };
 
     const removeVariant = (index: number) =>
         setData(
@@ -218,7 +224,10 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
                                 : 'This is a single product. Stock, price, SKU and barcode live below.'
                         }
                     />
-                    {hasVariants && (
+                    {/* Shown on edit too, so a single-product item can gain
+                        variants after the fact (additive only — collapsing back
+                        to single-product stays a create-time choice). */}
+                    {(hasVariants || isEdit) && (
                         <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                             <Plus className="size-4" /> Add variant
                         </Button>
