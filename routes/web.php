@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Inventory\ItemController;
@@ -59,7 +60,10 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:owner')->group(function () {
         Route::get('business-settings', [BusinessSettingsController::class, 'edit'])->name('business-settings');      // Phase 4
         Route::patch('business-settings', [BusinessSettingsController::class, 'update'])->name('business-settings.update');
-        Route::inertia('backup', 'backup')->name('backup');                                  // Phase 16
+        // Database backup & restore (Phase 16).
+        Route::get('backup', [BackupController::class, 'index'])->name('backup');
+        Route::post('backup', [BackupController::class, 'store'])->name('backup.store');
+        Route::post('backup/restore', [BackupController::class, 'restore'])->name('backup.restore');
     });
 });
 
