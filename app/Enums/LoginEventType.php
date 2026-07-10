@@ -6,18 +6,11 @@ enum LoginEventType: string
 {
     case Login = 'login';
     case Logout = 'logout';
-    case WindowClosed = 'window_closed';
     case ApplicationCrash = 'application_crash';
-    case PowerLoss = 'power_loss';
     case ForcedLogout = 'forced_logout';
 
-    /**
-     * Whether this event leaves a session "open" (i.e. not cleanly terminated).
-     * Only a bare Login leaves a session open; every other event terminates it.
-     * Used by session reconciliation to detect an un-terminated prior session.
-     */
-    public function isSessionOpen(): bool
-    {
-        return $this === self::Login;
-    }
+    // Legacy values retained so historical rows recorded before the boot-guard
+    // model still resolve; no new rows are written with these types.
+    case WindowClosed = 'window_closed';
+    case PowerLoss = 'power_loss';
 }

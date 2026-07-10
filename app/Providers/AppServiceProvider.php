@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Native\Laravel\Events\App\ApplicationBooted;
-use Native\Laravel\Events\PowerMonitor\Shutdown;
-use Native\Laravel\Events\Windows\WindowClosed;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,18 +27,13 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerAuthorizationGates();
 
-        // Desktop lifecycle → login-history capture. These NativePHP events only
-        // fire under the native runtime; outside it the listeners never run.
+        // Mint a fresh boot id on every launch. A session stamped with an older
+        // id (see EnforceBootSession) outlived the run that created it — i.e. the
+        // previous run ended without a clean logout. ApplicationBooted fires only
+        // under the native runtime; outside it the listener never runs (and the
+        // guard fails open when no boot id has been minted).
         Event::listen(ApplicationBooted::class, function (): void {
-            app(SessionManager::class)->reconcile();
-        });
-
-        Event::listen(WindowClosed::class, function (): void {
-            app(SessionManager::class)->handleWindowClosed();
-        });
-
-        Event::listen(Shutdown::class, function (): void {
-            app(SessionManager::class)->handleShutdown();
+            app(SessionManager::class)->handleBoot();
         });
     }
 
