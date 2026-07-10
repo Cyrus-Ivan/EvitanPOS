@@ -103,7 +103,19 @@ export interface User {
     username: string;
     role: UserRole;
     avatar?: string;
+    // Present on managed-user listings (Phase 13); set when the user is archived.
+    deleted_at?: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+// A user row as surfaced by the User Management listing (Phase 13).
+export interface ManagedUser {
+    id: string;
+    name: string | null;
+    username: string;
+    role: UserRole;
+    deleted_at: string | null;
+    created_at: string;
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
 use App\Http\Controllers\Inventory\ItemController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,8 +28,16 @@ Route::middleware(['auth'])->group(function () {
     // Admin-level: Admins and the Owner.
     Route::middleware('role:admin')->group(function () {
         Route::inertia('reports', 'reports')->name('reports');                          // Phase 12
-        Route::inertia('users', 'users')->name('users');                               // Phase 13
         Route::inertia('audit-logs', 'audit-logs')->name('audit-logs');                // Phase 15
+
+        // User management (Phase 13). Which roles an actor may create/assign and
+        // which users they may touch is enforced per-action by UserPolicy.
+        Route::get('users', [UserController::class, 'index'])->name('users');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
+        Route::patch('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::patch('users/{user}/archive', [UserController::class, 'archive'])->name('users.archive');
+        Route::patch('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore')->withTrashed();
 
         // Inventory writes (Phase 5). Literal segments are declared before the
         // {item} wildcard so create/categories are never captured as an id.

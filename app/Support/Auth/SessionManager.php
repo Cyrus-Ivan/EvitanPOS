@@ -61,6 +61,24 @@ class SessionManager
     }
 
     /**
+     * Administratively evict a specific user (e.g. after an Owner/Admin resets
+     * their password): record a forced logout and clear their session rows so
+     * they must sign in again with the new credentials. Safe to call when the
+     * user has no active session — it simply records the event.
+     */
+    public function forceLogout(User $target, ?string $reason = null): void
+    {
+        $this->recorder->record(
+            $target,
+            LoginEventType::ForcedLogout,
+            null,
+            $reason ?? 'Signed out by an administrator.',
+        );
+
+        DB::table($this->table())->where('user_id', $target->getKey())->delete();
+    }
+
+    /**
      * The desktop window was closed (NativePHP WindowClosed event).
      */
     public function handleWindowClosed(): void
