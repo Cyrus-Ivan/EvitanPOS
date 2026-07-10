@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('password');
             // Allowed values: owner | admin | cashier (see App\Enums\UserRole).
             $table->string('role');
-            $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
         });
