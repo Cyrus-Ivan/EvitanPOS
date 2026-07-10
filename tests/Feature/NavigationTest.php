@@ -24,6 +24,7 @@ class NavigationTest extends TestCase
             'pos' => ['pos'],
             'sales' => ['sales'],
             'inventory' => ['inventory'],
+            'inventory-import' => ['inventory.import'],
             'reports' => ['reports'],
             'users' => ['users'],
             'login-history' => ['login-history'],

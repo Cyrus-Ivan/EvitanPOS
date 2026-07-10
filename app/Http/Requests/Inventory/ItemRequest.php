@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Models\Item;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -57,6 +58,9 @@ abstract class ItemRequest extends FormRequest
         $canViewCost = Gate::allows('view-item-cost');
 
         $this->merge([
+            // Trim the item name so " Coke " and "Coke" are treated as the same
+            // for the uniqueness check below (and stored consistently).
+            'name' => is_string($this->input('name')) ? trim($this->input('name')) : $this->input('name'),
             'variants' => array_map(function ($variant) use ($canViewCost) {
                 if (! is_array($variant)) {
                     return $variant;
@@ -87,9 +91,36 @@ abstract class ItemRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $this->validateUniqueItemName($validator);
             $this->validateNoDuplicateIdentifiers($validator);
             $this->afterValidation($validator);
         });
+    }
+
+    /**
+     * Item names are globally unique, compared case-insensitively (trimmed) and
+     * spanning archived items — a retired name stays reserved. On update the
+     * item's own row is excluded. The DB index (items_name_unique) is the
+     * integrity backstop; this yields a friendly, field-level error.
+     */
+    private function validateUniqueItemName(Validator $validator): void
+    {
+        $name = trim((string) $this->input('name'));
+
+        if ($name === '') {
+            return; // the `required` rule already reports empties
+        }
+
+        $query = Item::whereRaw('lower(name) = ?', [mb_strtolower($name)]);
+
+        $current = $this->route('item');
+        if ($current instanceof Item) {
+            $query->whereKeyNot($current->getKey());
+        }
+
+        if ($query->exists()) {
+            $validator->errors()->add('name', 'An item with this name already exists.');
+        }
     }
 
     /**

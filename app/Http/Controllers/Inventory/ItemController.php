@@ -197,9 +197,9 @@ class ItemController extends Controller
         $name = is_string($name) ? trim($name) : $name;
 
         $attributes = [
-            // The variants.name column is NOT NULL; fall back to a sensible label
-            // for single-variant items where a name adds no information.
-            'name' => ($name === null || $name === '') ? 'Default' : $name,
+            // A blank name persists as null: single-variant ("no variant") items
+            // keep one unnamed variant that simply references the parent item.
+            'name' => ($name === null || $name === '') ? null : $name,
             'sku' => $variant['sku'] ?? null,
             'barcode' => $variant['barcode'] ?? null,
             'selling_price' => $variant['selling_price'],

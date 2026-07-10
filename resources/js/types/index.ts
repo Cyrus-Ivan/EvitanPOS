@@ -55,7 +55,8 @@ export interface Category {
 export interface Variant {
     id: string;
     item_id: string;
-    name: string;
+    // Null for a single-product ("no variant") item; falls back to the item name.
+    name: string | null;
     sku: string | null;
     barcode: string | null;
     selling_price: string;
@@ -105,7 +106,7 @@ export interface StockLedgerEntry {
     reference_type: string;
     notes: string | null;
     created_at: string;
-    variant: { id: string; name: string; item: string | null } | null;
+    variant: { id: string; name: string | null; item: string | null } | null;
     performed_by: string | null;
 }
 

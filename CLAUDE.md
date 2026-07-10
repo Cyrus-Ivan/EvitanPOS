@@ -41,8 +41,8 @@ These rules span the entire codebase and are the reason the architecture looks t
 
 **Identity & keys**
 - Every table uses a **UUID primary key**. Transaction numbers are a separate human-readable value (`YYYYMMDD-000001`, sequence resets daily; receipt number equals transaction number).
-- Uniqueness: username unique; SKU unique; barcode unique *when provided* (blank barcode is allowed and must not block selling).
-- Every Item must have **at least one Variant**. Stock, price, SKU, and barcode live on the Variant, not the Item.
+- Uniqueness: username unique; **Item name unique** (case-insensitive, spanning archived items); SKU unique; barcode unique *when provided* (blank barcode is allowed and must not block selling). **Variant names are not unique** — different items may reuse "Small"/"Large".
+- Every Item must have **at least one Variant**. Stock, price, SKU, and barcode live on the Variant, not the Item. A single-product item keeps exactly one **unnamed** variant (`name` is null) — the "no variant" case; UI and reports fall back to the item name.
 
 **Roles & permissions** (Owner > Admin > Cashier)
 - Exactly **one Owner**; the Owner can never be archived or deleted.

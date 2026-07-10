@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Category, Item, Paginated, Variant } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronRight, FolderCog, History, Package, Pencil, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, FileSpreadsheet, FolderCog, History, Package, Pencil, SlidersHorizontal } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Inventory', href: '/inventory' }];
@@ -144,6 +144,11 @@ export default function InventoryIndex({
                         {canManage && (
                             <>
                                 <Button variant="outline" asChild>
+                                    <Link href={route('inventory.import')}>
+                                        <FileSpreadsheet className="size-4" /> Import / Export
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" asChild>
                                     <Link href={route('categories.index')}>
                                         <FolderCog className="size-4" /> Manage categories
                                     </Link>
@@ -265,7 +270,7 @@ export default function InventoryIndex({
                                                                         const isLow = stock <= variant.low_stock_threshold;
                                                                         return (
                                                                             <TableRow key={variant.id} className="hover:bg-transparent">
-                                                                                <TableCell className="pr-8 font-medium">{variant.name}</TableCell>
+                                                                                <TableCell className="pr-8 font-medium">{variant.name || item.name}</TableCell>
                                                                                 <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
                                                                                 <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
                                                                                 <TableCell className="pr-8 text-right tabular-nums">

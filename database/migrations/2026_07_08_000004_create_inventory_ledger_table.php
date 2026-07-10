@@ -25,7 +25,7 @@ return new class extends Migration
             // Allowed: sale | return | defect (null for stock adjustments)
             $table->string('sale_type')->nullable();
             $table->uuid('reference_id')->nullable();
-            // Allowed: transaction | manual_adjustment
+            // Allowed: transaction | manual_adjustment | csv_import
             $table->string('reference_type');
             $table->text('notes')->nullable();
             $table->foreignUuid('performed_by')->constrained('users')->restrictOnDelete();

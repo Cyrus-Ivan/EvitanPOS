@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -20,6 +21,12 @@ return new class extends Migration
 
             $table->index('category_id');
         });
+
+        // Item names are globally unique, case-insensitively and spanning
+        // archived rows (a retired name stays reserved). COLLATE NOCASE folds
+        // case in the uniqueness check; a raw statement is used because the
+        // schema builder can't attach a collation to a unique index.
+        DB::statement('CREATE UNIQUE INDEX items_name_unique ON items (name COLLATE NOCASE)');
     }
 
     public function down(): void

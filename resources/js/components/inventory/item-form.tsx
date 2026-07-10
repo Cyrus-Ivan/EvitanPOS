@@ -1,6 +1,7 @@
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,9 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { Category, Item } from '@/types';
 import { Transition } from '@headlessui/react';
-import { useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 
 // Declared as `type` (not `interface`) so they satisfy Inertia's
 // Record<string, FormDataConvertible> constraint on useForm.
@@ -70,6 +71,28 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
 
     const { data, setData, errors, processing, recentlySuccessful } = form;
 
+    // "This item has multiple variants" toggle. Off = a single "no variant"
+    // product: one variant with a null name that just references the item.
+    // Default off for new items; on when editing anything richer than a lone
+    // unnamed variant.
+    const [hasVariants, setHasVariants] = useState<boolean>(() => {
+        const variants = item?.variants;
+        if (!variants?.length) {
+            return false;
+        }
+        return variants.length > 1 || Boolean(variants[0].name);
+    });
+
+    // Switching to single-product mode collapses to one unnamed variant. The
+    // extra rows drop out of the payload, so the server archives them (never
+    // deletes — recoverable via the Archived filter).
+    const setSingleProduct = (single: boolean) => {
+        setHasVariants(!single);
+        if (single) {
+            setData('variants', [{ ...data.variants[0], name: '' }]);
+        }
+    };
+
     // Nested error keys (e.g. "variants.0.sku") fall outside the typed top-level
     // keys, so read them through a loosely-typed view of the same object.
     const err = errors as Record<string, string | undefined>;
@@ -95,9 +118,12 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
         form.transform((payload) => ({
             ...payload,
             category_id: payload.category_id === NO_CATEGORY ? '' : payload.category_id,
-            variants: (payload.variants as VariantRow[]).map((row) => {
+            // Single-product mode submits exactly one variant; the rest are
+            // dropped so the server archives them.
+            variants: (hasVariants ? (payload.variants as VariantRow[]) : (payload.variants as VariantRow[]).slice(0, 1)).map((row) => {
                 const variant: Record<string, unknown> = {
-                    name: row.name,
+                    // Blank name persists as null (a "no variant" product).
+                    name: row.name.trim() === '' ? null : row.name,
                     sku: row.sku,
                     barcode: row.barcode,
                     selling_price: row.selling_price,
@@ -184,43 +210,65 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
 
             <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <HeadingSmall title="Variants" description="Every item needs at least one variant." />
-                    <Button type="button" variant="outline" size="sm" onClick={addVariant}>
-                        <Plus className="size-4" /> Add variant
-                    </Button>
+                    <HeadingSmall
+                        title="Variants"
+                        description={
+                            hasVariants
+                                ? 'Every item needs at least one variant.'
+                                : 'This is a single product. Stock, price, SKU and barcode live below.'
+                        }
+                    />
+                    {hasVariants && (
+                        <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                            <Plus className="size-4" /> Add variant
+                        </Button>
+                    )}
                 </div>
+
+                {/* The single-product vs. multi-variant choice is fixed at creation
+                    time, so the toggle only appears on the create form. */}
+                {!isEdit && (
+                    <label className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={hasVariants} onCheckedChange={(checked) => setSingleProduct(checked !== true)} />
+                        This item has multiple variants
+                    </label>
+                )}
 
                 {/* The `variants` array error (e.g. "at least one required") surfaces here. */}
                 <InputError message={errors.variants} />
 
                 <div className="space-y-4">
-                    {data.variants.map((variant, index) => (
+                    {(hasVariants ? data.variants : data.variants.slice(0, 1)).map((variant, index) => (
                         <div key={variant.id ?? index} className="rounded-lg border p-4">
-                            <div className="mb-3 flex items-center justify-between">
-                                <span className="text-muted-foreground text-sm font-medium">Variant {index + 1}</span>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeVariant(index)}
-                                    disabled={data.variants.length === 1}
-                                    title={data.variants.length === 1 ? 'An item must keep at least one variant' : 'Remove variant'}
-                                >
-                                    <Trash2 className="size-4" />
-                                </Button>
-                            </div>
+                            {hasVariants && (
+                                <div className="mb-3 flex items-center justify-between">
+                                    <span className="text-muted-foreground text-sm font-medium">Variant {index + 1}</span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeVariant(index)}
+                                        disabled={data.variants.length === 1}
+                                        title={data.variants.length === 1 ? 'An item must keep at least one variant' : 'Remove variant'}
+                                    >
+                                        <Trash2 className="size-4" />
+                                    </Button>
+                                </div>
+                            )}
 
                             <div className={`grid gap-3 ${canViewCost ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-                                <div className="grid gap-2">
-                                    <Label htmlFor={`variant-${index}-name`}>Name</Label>
-                                    <Input
-                                        id={`variant-${index}-name`}
-                                        value={variant.name}
-                                        onChange={(e) => setVariant(index, 'name', e.target.value)}
-                                        placeholder="e.g. Default, Small"
-                                    />
-                                    <InputError message={err[`variants.${index}.name`]} />
-                                </div>
+                                {hasVariants && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor={`variant-${index}-name`}>Name</Label>
+                                        <Input
+                                            id={`variant-${index}-name`}
+                                            value={variant.name}
+                                            onChange={(e) => setVariant(index, 'name', e.target.value)}
+                                            placeholder="e.g. Small, Large"
+                                        />
+                                        <InputError message={err[`variants.${index}.name`]} />
+                                    </div>
+                                )}
 
                                 <div className="grid gap-2">
                                     <Label htmlFor={`variant-${index}-sku`}>SKU</Label>
@@ -294,6 +342,9 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
 
             <div className="flex items-center gap-4">
                 <Button disabled={processing}>{isEdit ? 'Save changes' : 'Create item'}</Button>
+                <Button type="button" variant="outline" asChild>
+                    <Link href={route('inventory')}>Cancel</Link>
+                </Button>
                 <Transition
                     show={recentlySuccessful}
                     enter="transition ease-in-out"

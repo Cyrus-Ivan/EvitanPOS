@@ -51,6 +51,123 @@ class ItemManagementTest extends TestCase
         $this->assertSame('WID-001', $item->variants()->first()->sku);
     }
 
+    public function test_owner_can_create_a_no_variant_item()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload([], [
+                [
+                    'name' => null,
+                    'sku' => 'SOLO-1',
+                    'barcode' => null,
+                    'selling_price' => '10.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => '4.00',
+                ],
+            ]))
+            ->assertRedirect(route('inventory'))
+            ->assertSessionHasNoErrors();
+
+        $variant = Item::first()->variants()->sole();
+        $this->assertNull($variant->name);
+        $this->assertSame('SOLO-1', $variant->sku);
+    }
+
+    public function test_blank_variant_name_persists_as_null()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload([], [
+                [
+                    'name' => '',
+                    'sku' => 'SOLO-2',
+                    'barcode' => null,
+                    'selling_price' => '10.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(Item::first()->variants()->sole()->name);
+    }
+
+    public function test_editing_keeps_a_no_variant_row_matched_not_recreated()
+    {
+        $item = Item::factory()->create();
+        $variant = Variant::factory()->for($item)->create(['name' => null, 'sku' => 'SOLO-3']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload([], [
+                [
+                    'id' => $variant->id,
+                    'name' => null,
+                    'sku' => 'SOLO-3',
+                    'barcode' => null,
+                    'selling_price' => '15.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        // Same row updated in place — never archived+recreated.
+        $this->assertSame(1, $item->variants()->count());
+        $variant->refresh();
+        $this->assertNull($variant->archived_at);
+        $this->assertNull($variant->name);
+        $this->assertSame('15.00', $variant->selling_price);
+    }
+
+    public function test_duplicate_item_name_is_rejected_case_insensitively()
+    {
+        Item::factory()->create(['name' => 'Coca-Cola']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload(['name' => 'coca-cola']))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(1, Item::count());
+    }
+
+    public function test_item_name_uniqueness_spans_archived_items()
+    {
+        Item::factory()->archived()->create(['name' => 'Retired Product']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload(['name' => 'Retired Product']))
+            ->assertSessionHasErrors('name');
+    }
+
+    public function test_item_name_is_trimmed_before_the_uniqueness_check()
+    {
+        Item::factory()->create(['name' => 'Coca-Cola']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload(['name' => '  Coca-Cola  ']))
+            ->assertSessionHasErrors('name');
+    }
+
+    public function test_updating_an_item_keeps_its_own_name()
+    {
+        $item = Item::factory()->create(['name' => 'Widget']);
+        Variant::factory()->for($item)->create();
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'Widget']))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_renaming_an_item_to_another_items_name_is_rejected()
+    {
+        Item::factory()->create(['name' => 'Taken Name']);
+        $item = Item::factory()->create(['name' => 'Original']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'Taken Name']))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame('Original', $item->fresh()->name);
+    }
+
     public function test_create_form_renders()
     {
         Category::factory()->create();

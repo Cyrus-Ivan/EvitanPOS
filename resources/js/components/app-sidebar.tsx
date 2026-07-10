@@ -3,7 +3,20 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavGroup } from '@/types';
 import { Link } from '@inertiajs/react';
-import { ChartColumn, DatabaseBackup, History, LayoutGrid, Package, PackageSearch, ReceiptText, ScrollText, ShoppingCart, Store, UsersRound } from 'lucide-react';
+import {
+    ChartColumn,
+    DatabaseBackup,
+    FileSpreadsheet,
+    History,
+    LayoutGrid,
+    Package,
+    PackageSearch,
+    ReceiptText,
+    ScrollText,
+    ShoppingCart,
+    Store,
+    UsersRound,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 // Full navigation surface, grouped by function. Each item carries the minimum
@@ -18,6 +31,7 @@ const mainNavGroups: NavGroup[] = [
             { title: 'Sales', url: '/sales', icon: ReceiptText },
             { title: 'Inventory', url: '/inventory', icon: Package }, // view-only for Cashier
             { title: 'Stock History', url: '/inventory/stock-history', icon: PackageSearch }, // read-only ledger
+            { title: 'Import / Export', url: '/inventory/import', icon: FileSpreadsheet, minRole: 'admin' },
         ],
     },
     {

@@ -43,8 +43,16 @@ function formatWhen(value: string): string {
 
 interface VariantOption {
     id: string;
-    name: string;
+    name: string | null;
     item: string | null;
+}
+
+// A "no variant" product has a null name; show the parent item name instead.
+function variantLabel(variant: { name: string | null; item: string | null }): string {
+    if (variant.name && variant.item) {
+        return `${variant.item} — ${variant.name}`;
+    }
+    return variant.name ?? variant.item ?? '—';
 }
 
 interface Filters {
@@ -92,7 +100,7 @@ export default function StockHistory({
                             <SelectItem value={ALL}>All variants</SelectItem>
                             {variants.map((variant) => (
                                 <SelectItem key={variant.id} value={variant.id}>
-                                    {variant.item ? `${variant.item} — ${variant.name}` : variant.name}
+                                    {variantLabel(variant)}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -158,7 +166,7 @@ export default function StockHistory({
                                             {entry.variant ? (
                                                 <>
                                                     <span className="font-medium">{entry.variant.item ?? '—'}</span>
-                                                    <span className="text-muted-foreground"> · {entry.variant.name}</span>
+                                                    {entry.variant.name && <span className="text-muted-foreground"> · {entry.variant.name}</span>}
                                                 </>
                                             ) : (
                                                 '—'

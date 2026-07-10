@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use Database\Factories\ImportHistoryFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ImportHistory extends Model
 {
-    use HasUuidPrimaryKey;
+    /** @use HasFactory<ImportHistoryFactory> */
+    use HasFactory, HasUuidPrimaryKey;
 
     protected $table = 'import_history';
 

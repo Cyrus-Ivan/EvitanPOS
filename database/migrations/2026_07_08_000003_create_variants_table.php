@@ -11,7 +11,9 @@ return new class extends Migration
         Schema::create('variants', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('item_id')->constrained()->restrictOnDelete();
-            $table->string('name');
+            // Nullable: a single-variant ("no variant") item stores one variant
+            // with a null name that simply references the parent item.
+            $table->string('name')->nullable();
             // SKU / barcode are optional but unique when provided. SQLite treats
             // multiple NULLs as distinct, so a plain unique index gives us
             // "unique when present" without a partial index.

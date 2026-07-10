@@ -3,6 +3,8 @@
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
+use App\Http\Controllers\Inventory\InventoryExportController;
+use App\Http\Controllers\Inventory\InventoryImportController;
 use App\Http\Controllers\Inventory\ItemController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockHistoryController;
@@ -51,6 +53,14 @@ Route::middleware(['auth'])->group(function () {
         // {item} wildcard so create/categories are never captured as an id.
         Route::get('inventory/create', [ItemController::class, 'create'])->name('items.create');
         Route::post('inventory', [ItemController::class, 'store'])->name('items.store');
+
+        // Inventory CSV import / export (Phase 7). Literal segments, declared
+        // before the {item} wildcard so they are never captured as an item id.
+        Route::get('inventory/import', [InventoryImportController::class, 'index'])->name('inventory.import');
+        Route::post('inventory/import', [InventoryImportController::class, 'store'])->name('inventory.import.store');
+        Route::get('inventory/import/template', [InventoryImportController::class, 'template'])->name('inventory.import.template');
+        Route::get('inventory/export', InventoryExportController::class)->name('inventory.export');
+
         Route::get('inventory/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
         Route::patch('inventory/{item}', [ItemController::class, 'update'])->name('items.update');
         Route::patch('inventory/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
