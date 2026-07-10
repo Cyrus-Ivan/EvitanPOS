@@ -4,49 +4,58 @@ namespace App\Support\Auth;
 
 use App\Enums\LoginEventType;
 use App\Models\User;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
- * Enforces "one authenticated user at a time" and captures the terminal
- * login-history events (logout / window closed / power loss / crash) by
- * reconciling the DB-backed `sessions` table against `login_history`.
+ * Owns the login-history lifecycle for the desktop app.
  *
- * A session is considered cleanly closed when its `sessions` row is deleted.
- * Every graceful terminal path here deletes the row, so a row still present at
- * next launch means the prior run died without a terminal event (a crash).
+ * NativePHP forces the session driver to `file`, so sessions are stored on disk
+ * and survive an unclean exit (window closed, OS shutdown, crash, or force-kill)
+ * — the DB `sessions` table is empty in the native runtime. We therefore cannot
+ * detect an interrupted session by reconciling that table. Instead, every app
+ * run mints a fresh "boot id"; a session stamped with an older id outlived the
+ * run that created it and is treated as an unclean exit (see EnforceBootSession).
  */
 class SessionManager
 {
+    /**
+     * Cache key holding the current run's boot id. Backed by the shared
+     * (database) cache so every NativePHP worker process sees the same value.
+     */
+    private const BOOT_ID_KEY = 'app_boot_id';
+
     public function __construct(private readonly LoginHistoryRecorder $recorder) {}
 
     /**
-     * On successful login, evict every other session (there may be only one
-     * authenticated user at a time). Any evicted session that still belonged to
-     * an "open" user is a forced logout for that user.
+     * Mint a fresh boot id for this application run. Called on ApplicationBooted,
+     * which fires reliably on every launch (unlike the window-close/shutdown
+     * events, which race the process teardown and rarely reach PHP in time).
      */
-    public function handleLogin(User $user, string $currentSessionId): void
+    public function handleBoot(): string
     {
-        $others = DB::table($this->table())
-            ->where('id', '!=', $currentSessionId)
-            ->whereNotNull('user_id')
-            ->get();
+        $bootId = (string) Str::uuid();
+        Cache::forever(self::BOOT_ID_KEY, $bootId);
 
-        foreach ($others as $row) {
-            if ($this->latestEventFor($row->user_id)?->isSessionOpen() === true) {
-                if ($evicted = User::withTrashed()->find($row->user_id)) {
-                    $this->recorder->record(
-                        $evicted,
-                        LoginEventType::ForcedLogout,
-                        Carbon::createFromTimestamp($row->last_activity),
-                        'Evicted by a new login (single active session).',
-                    );
-                }
-            }
-        }
+        return $bootId;
+    }
 
-        DB::table($this->table())->where('id', '!=', $currentSessionId)->delete();
+    /**
+     * The current run's boot id, or null if one has not been minted yet.
+     */
+    public function currentBootId(): ?string
+    {
+        return Cache::get(self::BOOT_ID_KEY);
+    }
 
+    /**
+     * Record a successful login. The desktop app is single-window, so the one
+     * session cookie already guarantees a single active user; forcing out a
+     * session that lingered from an earlier run is the boot-session guard's job.
+     */
+    public function handleLogin(User $user): void
+    {
         $this->recorder->record($user, LoginEventType::Login);
     }
 
@@ -56,15 +65,29 @@ class SessionManager
     public function handleLogout(User $user): void
     {
         $this->recorder->record($user, LoginEventType::Logout);
-
-        DB::table($this->table())->where('user_id', $user->getKey())->delete();
     }
 
     /**
-     * Administratively evict a specific user (e.g. after an Owner/Admin resets
-     * their password): record a forced logout and clear their session rows so
-     * they must sign in again with the new credentials. Safe to call when the
-     * user has no active session — it simply records the event.
+     * A session that outlived the run it was created in: the previous run ended
+     * without a clean logout (window closed, shutdown, crash, or force-kill).
+     * All such interruptions are indistinguishable by the next launch, so they
+     * share a single event type.
+     */
+    public function markUncleanExit(User $user): void
+    {
+        $this->recorder->record(
+            $user,
+            LoginEventType::ApplicationCrash,
+            null,
+            'Signed out: the app did not close cleanly (detected on next launch).',
+        );
+    }
+
+    /**
+     * Administratively evict a user (e.g. after an Owner/Admin resets their
+     * password) so they must sign in again. Records the event and, defensively,
+     * clears any database-backed session rows for them (a no-op under the native
+     * file-session driver, but correct should the driver ever be `database`).
      */
     public function forceLogout(User $target, ?string $reason = null): void
     {
@@ -75,91 +98,8 @@ class SessionManager
             $reason ?? 'Signed out by an administrator.',
         );
 
-        DB::table($this->table())->where('user_id', $target->getKey())->delete();
-    }
-
-    /**
-     * The desktop window was closed (NativePHP WindowClosed event).
-     */
-    public function handleWindowClosed(): void
-    {
-        $this->terminateActiveSessions(LoginEventType::WindowClosed);
-    }
-
-    /**
-     * The OS is shutting down while the app runs (NativePHP PowerMonitor
-     * Shutdown event) — the closest match in the fixed vocabulary is power loss.
-     */
-    public function handleShutdown(): void
-    {
-        $this->terminateActiveSessions(LoginEventType::PowerLoss);
-    }
-
-    /**
-     * Runs on every launch (NativePHP ApplicationBooted). Any leftover session
-     * whose user is still "open" means the previous run ended without a terminal
-     * event — record an application crash, back-dated to the session's last
-     * activity, then clear the stale rows. Idempotent.
-     */
-    public function reconcile(): void
-    {
-        $leftovers = DB::table($this->table())->whereNotNull('user_id')->get();
-
-        foreach ($leftovers as $row) {
-            if ($this->latestEventFor($row->user_id)?->isSessionOpen() === true) {
-                if ($user = User::withTrashed()->find($row->user_id)) {
-                    $this->recorder->record(
-                        $user,
-                        LoginEventType::ApplicationCrash,
-                        Carbon::createFromTimestamp($row->last_activity),
-                        'Unclean shutdown detected on next startup.',
-                    );
-                }
-            }
-
-            DB::table($this->table())->where('id', $row->id)->delete();
-        }
-    }
-
-    /**
-     * Record the given terminal event for every currently-active user, then
-     * clear their sessions so the next launch sees a clean state.
-     */
-    private function terminateActiveSessions(LoginEventType $type): void
-    {
-        $rows = DB::table($this->table())->whereNotNull('user_id')->get();
-
-        $seen = [];
-        foreach ($rows as $row) {
-            if (in_array($row->user_id, $seen, true)) {
-                continue;
-            }
-            $seen[] = $row->user_id;
-
-            if ($user = User::withTrashed()->find($row->user_id)) {
-                $this->recorder->record($user, $type);
-            }
-        }
-
-        DB::table($this->table())->whereNotNull('user_id')->delete();
-    }
-
-    /**
-     * The most recently recorded login-history event for a user, or null.
-     */
-    private function latestEventFor(string $userId): ?LoginEventType
-    {
-        $event = DB::table('login_history')
-            ->where('user_id', $userId)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->value('event_type');
-
-        return $event === null ? null : LoginEventType::from($event);
-    }
-
-    private function table(): string
-    {
-        return config('session.table', 'sessions');
+        DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $target->getKey())
+            ->delete();
     }
 }

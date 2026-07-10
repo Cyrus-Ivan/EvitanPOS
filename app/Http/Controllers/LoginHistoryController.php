@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\LoginEventType;
 use App\Models\LoginHistory;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,11 +27,23 @@ class LoginHistoryController extends Controller
 
         $userFilter = $canViewAll ? ($request->query('user') ?: null) : $viewer->getKey();
         $eventFilter = $this->normalizeEvent($request->query('event'));
+        $dateFrom = $this->normalizeDate($request->query('date_from'));
+        $dateTo = $this->normalizeDate($request->query('date_to'));
 
         $entries = LoginHistory::query()
             ->with('user:id,name,username')
             ->when($userFilter, fn ($query) => $query->where('user_id', $userFilter))
             ->when($eventFilter, fn ($query) => $query->where('event_type', $eventFilter))
+            // Filter on the displayed "When" value (occurred_at falls back to
+            // created_at) so the range matches exactly what the table shows.
+            ->when($dateFrom, fn ($query) => $query->whereRaw(
+                'COALESCE(occurred_at, created_at) >= ?',
+                [$dateFrom->startOfDay()->format('Y-m-d H:i:s')],
+            ))
+            ->when($dateTo, fn ($query) => $query->whereRaw(
+                'COALESCE(occurred_at, created_at) <= ?',
+                [$dateTo->endOfDay()->format('Y-m-d H:i:s')],
+            ))
             ->orderByDesc('occurred_at')
             ->orderByDesc('created_at')
             ->paginate(20)
@@ -60,6 +73,8 @@ class LoginHistoryController extends Controller
             'filters' => [
                 'user' => $canViewAll ? $userFilter : null,
                 'event' => $eventFilter,
+                'date_from' => $dateFrom?->toDateString(),
+                'date_to' => $dateTo?->toDateString(),
             ],
         ]);
     }
@@ -70,5 +85,21 @@ class LoginHistoryController extends Controller
     private function normalizeEvent(mixed $event): ?string
     {
         return LoginEventType::tryFrom((string) $event)?->value;
+    }
+
+    /**
+     * Parse a date filter param, discarding anything unparseable, else null.
+     */
+    private function normalizeDate(mixed $value): ?Carbon
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

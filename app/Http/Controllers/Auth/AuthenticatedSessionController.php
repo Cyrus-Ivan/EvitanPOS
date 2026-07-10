@@ -32,8 +32,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Enforce a single active session and record the login event.
-        $sessions->handleLogin($request->user(), $request->session()->getId());
+        // Record the login event.
+        $sessions->handleLogin($request->user());
+
+        // Stamp this run's boot id onto the session so the boot-session guard can
+        // recognise it as belonging to the current run. A session that survives
+        // into a later run (an unclean exit) will carry a stale id and be forced
+        // out on its next request.
+        $request->session()->put('boot_id', $sessions->currentBootId());
 
         return redirect()->intended(route('dashboard', absolute: false));
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceBootSession;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -15,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            // Runs after StartSession and before Inertia so a stale-boot session
+            // is signed out (and short-circuited to login) before any page props
+            // are shared. Self-guards on an authenticated user.
+            EnforceBootSession::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

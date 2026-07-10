@@ -1,6 +1,7 @@
 import EmptyState from '@/components/empty-state';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
@@ -17,10 +18,13 @@ const ALL = 'all';
 const EVENT: Record<LoginEventType, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     login: { label: 'Login', variant: 'default' },
     logout: { label: 'Logout', variant: 'secondary' },
-    window_closed: { label: 'Window closed', variant: 'outline' },
-    application_crash: { label: 'App crash', variant: 'destructive' },
-    power_loss: { label: 'Power loss', variant: 'destructive' },
+    // Any unclean exit (window closed / shutdown / crash / force-kill) is detected
+    // on the next launch and recorded uniformly as application_crash.
+    application_crash: { label: 'Unexpected exit', variant: 'destructive' },
     forced_logout: { label: 'Forced logout', variant: 'destructive' },
+    // Legacy values kept for historical rows recorded before the boot-guard model.
+    window_closed: { label: 'Window closed', variant: 'outline' },
+    power_loss: { label: 'Power loss', variant: 'destructive' },
 };
 
 function formatWhen(value: string | null): string {
@@ -34,6 +38,8 @@ function formatWhen(value: string | null): string {
 interface Filters {
     user: string | null;
     event: string | null;
+    date_from: string | null;
+    date_to: string | null;
 }
 
 export default function LoginHistory({
@@ -50,12 +56,14 @@ export default function LoginHistory({
     filters: Filters;
 }) {
     const applyFilters = (next: Partial<Filters>) => {
-        const merged = { user: filters.user, event: filters.event, ...next };
+        const merged = { ...filters, ...next };
         router.get(
             route('login-history'),
             {
                 user: merged.user && merged.user !== ALL ? merged.user : undefined,
                 event: merged.event && merged.event !== ALL ? merged.event : undefined,
+                date_from: merged.date_from || undefined,
+                date_to: merged.date_to || undefined,
             },
             { preserveState: true, preserveScroll: true, replace: true, only: ['entries', 'filters'] },
         );
@@ -94,6 +102,24 @@ export default function LoginHistory({
                             ))}
                         </SelectContent>
                     </Select>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">From</span>
+                        <Input
+                            type="date"
+                            value={filters.date_from ?? ''}
+                            max={filters.date_to ?? undefined}
+                            onChange={(e) => applyFilters({ date_from: e.target.value || null })}
+                            className="w-40"
+                        />
+                        <span className="text-sm text-muted-foreground">To</span>
+                        <Input
+                            type="date"
+                            value={filters.date_to ?? ''}
+                            min={filters.date_from ?? undefined}
+                            onChange={(e) => applyFilters({ date_to: e.target.value || null })}
+                            className="w-40"
+                        />
+                    </div>
                 </div>
 
                 {entries.data.length === 0 ? (
