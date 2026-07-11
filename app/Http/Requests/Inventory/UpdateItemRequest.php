@@ -19,9 +19,11 @@ class UpdateItemRequest extends ItemRequest
 
         // Item names are immutable. The form disables the field, so this only
         // trips on a forged request; resubmitting the current name (any case)
-        // passes because the stored name is kept either way.
+        // passes because the stored name is kept either way. ASCII-only
+        // strtolower matches the NOCASE collation used everywhere names are
+        // compared.
         $name = trim((string) $this->input('name'));
-        if ($name !== '' && mb_strtolower($name) !== mb_strtolower($item->name)) {
+        if ($name !== '' && strtolower($name) !== strtolower($item->name)) {
             $validator->errors()->add('name', "An item's name can't be changed after it is created.");
         }
 

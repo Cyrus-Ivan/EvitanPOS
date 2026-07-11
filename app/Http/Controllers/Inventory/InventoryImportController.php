@@ -42,7 +42,6 @@ class InventoryImportController extends Controller
 
         return Inertia::render('inventory/import', [
             'history' => $history,
-            'canViewCost' => Gate::allows('view-item-cost'),
         ]);
     }
 

@@ -763,4 +763,64 @@ class InventoryImportTest extends TestCase
 
         $this->assertSame(0, Variant::count());
     }
+
+    public function test_ascii_case_variant_product_name_matches_even_with_unicode_present()
+    {
+        $owner = User::factory()->owner()->create();
+        $item = Item::factory()->create(['name' => 'CAFÉ LATTE']);
+        Variant::factory()->for($item)->create(['sku' => 'CAFE-1', 'name' => 'Small']);
+
+        // Only ASCII letters differ in case (the É is untouched) — this must
+        // resolve to the existing item, not trip the immutable-name check or
+        // create a duplicate.
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row(['product' => 'cafÉ latte', 'category' => '', 'sku' => 'CAFE-1', 'variant' => 'Small']),
+            ])])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('success', ImportHistory::first()->status);
+        $this->assertSame(1, Item::count());
+        $this->assertSame('CAFÉ LATTE', $item->fresh()->name); // never renamed
+    }
+
+    public function test_non_ascii_case_variant_product_name_is_a_distinct_item_matching_the_nocase_index()
+    {
+        $owner = User::factory()->owner()->create();
+        $item = Item::factory()->create(['name' => 'CAFÉ LATTE']);
+        Variant::factory()->for($item)->create(['sku' => 'CAFE-1', 'name' => 'Small']);
+
+        // 'é' vs 'É' is beyond SQLite's ASCII-only NOCASE, so the lookup and
+        // the items_name_unique index must agree: this is a different name and
+        // becomes its own item — never a silent write onto the existing one.
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row(['product' => 'Café Latte', 'category' => '', 'sku' => 'CAFE-2', 'variant' => 'Small']),
+            ])])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('success', ImportHistory::first()->status);
+        $this->assertSame(2, Item::count());
+        $this->assertSame($item->id, Variant::where('sku', 'CAFE-1')->first()->item_id);
+        $this->assertNotSame($item->id, Variant::where('sku', 'CAFE-2')->first()->item_id);
+    }
+
+    public function test_barcode_uniqueness_is_case_sensitive_like_the_unique_index()
+    {
+        $owner = User::factory()->owner()->create();
+        Variant::factory()->create(['sku' => 'EXIST-1', 'barcode' => 'ABC-111']);
+
+        // The DB index and the item form both treat barcodes case-sensitively;
+        // the import must not be stricter than what it round-trips with.
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row(['sku' => 'NEW-1', 'variant' => 'Small', 'barcode' => 'abc-111']),
+                $this->row(['sku' => 'NEW-2', 'variant' => 'Large', 'barcode' => 'AbC-111']),
+            ])])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('success', ImportHistory::first()->status);
+        $this->assertSame('abc-111', Variant::where('sku', 'NEW-1')->first()->barcode);
+        $this->assertSame('AbC-111', Variant::where('sku', 'NEW-2')->first()->barcode);
+    }
 }

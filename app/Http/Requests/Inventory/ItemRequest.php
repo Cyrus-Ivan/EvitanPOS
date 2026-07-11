@@ -106,7 +106,8 @@ abstract class ItemRequest extends FormRequest
      * Item names are globally unique, compared case-insensitively (trimmed) and
      * spanning archived items — a retired name stays reserved. On update the
      * item's own row is excluded. The DB index (items_name_unique) is the
-     * integrity backstop; this yields a friendly, field-level error.
+     * integrity backstop; comparing with the same NOCASE collation the index
+     * uses keeps this check and the index in exact agreement.
      */
     private function validateUniqueItemName(Validator $validator): void
     {
@@ -116,7 +117,7 @@ abstract class ItemRequest extends FormRequest
             return; // the `required` rule already reports empties
         }
 
-        $query = Item::whereRaw('lower(name) = ?', [mb_strtolower($name)]);
+        $query = Item::whereRaw('name = ? COLLATE NOCASE', [$name]);
 
         $current = $this->route('item');
         if ($current instanceof Item) {

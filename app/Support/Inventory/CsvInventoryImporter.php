@@ -93,13 +93,23 @@ class CsvInventoryImporter
             ]);
         }
 
-        [$columnMap, $headerErrors] = $this->readHeaders($path);
+        // One pass over one stream: the header read leaves the handle
+        // positioned on the first data row, which the row loop continues from.
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, $contents);
+        rewind($handle);
 
-        if ($headerErrors !== []) {
-            return $this->record($importId, $user, $filename, self::MODE_FALLBACK, 'failed', 0, 0, 1, $headerErrors);
+        try {
+            [$columnMap, $headerErrors] = $this->readHeaders($handle);
+
+            if ($headerErrors !== []) {
+                return $this->record($importId, $user, $filename, self::MODE_FALLBACK, 'failed', 0, 0, 1, $headerErrors);
+            }
+
+            [$rows, $rowErrors] = $this->parseAndValidate($handle, $columnMap, $canViewCost);
+        } finally {
+            fclose($handle);
         }
-
-        [$rows, $rowErrors] = $this->parseAndValidate($path, $columnMap, $canViewCost);
 
         $modes = array_values(array_unique(array_column($rows, 'mode')));
         $mode = match (true) {
@@ -118,9 +128,13 @@ class CsvInventoryImporter
 
         // Once every row is individually valid, validate the resulting catalog
         // shape against the DB (archived matches, immutable names/categories,
-        // no-variant vs. named model).
+        // no-variant vs. named model). The variants the file matches by SKU are
+        // loaded once here and reused by apply().
+        $variantsBySku = collect();
+
         if ($rowErrors === []) {
-            $rowErrors = $this->validateCatalogShape($rows);
+            $variantsBySku = $this->variantsBySku(array_column($rows, 'sku'));
+            $rowErrors = $this->validateCatalogShape($rows, $variantsBySku);
         }
 
         if ($rowErrors !== []) {
@@ -128,35 +142,34 @@ class CsvInventoryImporter
         }
 
         try {
-            DB::transaction(function () use ($rows, $user, $canViewCost, $importId) {
-                $this->apply($rows, $user, $canViewCost, $importId);
+            // The success row is written inside the transaction on purpose: if
+            // recording it fails, the catalog changes roll back with it, so the
+            // fallback "failed — no changes were saved" entry import() then
+            // writes is actually true.
+            return DB::transaction(function () use ($rows, $user, $canViewCost, $importId, $filename, $mode, $total, $variantsBySku) {
+                $this->apply($rows, $user, $canViewCost, $importId, $variantsBySku);
+
+                return $this->record($importId, $user, $filename, $mode, 'success', $total, $total, 0, []);
             });
         } catch (ImportRowException $e) {
             return $this->record($importId, $user, $filename, $mode, 'failed', $total, 0, 1, [
                 ['row' => $e->csvLine, 'messages' => [$e->getMessage()]],
             ]);
         }
-
-        return $this->record($importId, $user, $filename, $mode, 'success', $total, $total, 0, []);
     }
 
     /**
-     * Read and validate the header row. Returns [columnMap, errors] where
-     * columnMap maps a canonical column name to its 0-based position, and a
-     * non-empty errors list means the file is unusable (missing columns).
+     * Read and validate the header row from the open CSV stream, leaving the
+     * handle positioned on the first data row. Returns [columnMap, errors]
+     * where columnMap maps a canonical column name to its 0-based position, and
+     * a non-empty errors list means the file is unusable (missing columns).
      *
+     * @param  resource  $handle
      * @return array{0: array<string, int>, 1: list<array{row: null, messages: list<string>}>}
      */
-    private function readHeaders(string $path): array
+    private function readHeaders($handle): array
     {
-        $handle = fopen($path, 'r');
-
-        if ($handle === false) {
-            return [[], [['row' => null, 'messages' => ['The file could not be read.']]]];
-        }
-
         $header = fgetcsv($handle, escape: '');
-        fclose($handle);
 
         if ($header === false || $header === null) {
             return [[], [['row' => null, 'messages' => ['The file is empty.']]]];
@@ -197,26 +210,22 @@ class CsvInventoryImporter
     ];
 
     /**
-     * Parse every data row into a normalised structure and validate it. Returns
-     * [rows, errors]; rows is only meaningful (and applied) when errors is empty.
+     * Parse every data row into a normalised structure and validate it. Expects
+     * the handle to sit just past the header (where readHeaders left it).
+     * Returns [rows, errors]; rows is only meaningful (and applied) when errors
+     * is empty.
      *
+     * @param  resource  $handle
      * @param  array<string, int>  $columnMap
      * @return array{0: list<array<string, mixed>>, 1: list<array{row: int|null, messages: list<string>}>}
      */
-    private function parseAndValidate(string $path, array $columnMap, bool $canViewCost): array
+    private function parseAndValidate($handle, array $columnMap, bool $canViewCost): array
     {
-        $handle = fopen($path, 'r');
-
-        if ($handle === false) {
-            return [[], [['row' => null, 'messages' => ['The file could not be read.']]]];
-        }
-
-        fgetcsv($handle, escape: ''); // discard header
-
         $rows = [];
-        $errors = [];
+        $errorsByLine = [];
         $seenSku = [];
         $seenBarcode = [];
+        $barcodeRows = [];
         $line = 1; // header was line 1
 
         while (($cells = fgetcsv($handle, escape: '')) !== false) {
@@ -309,21 +318,23 @@ class CsvInventoryImporter
             }
 
             if ($barcode !== '') {
-                $barcodeKey = mb_strtolower($barcode);
-                if (isset($seenBarcode[$barcodeKey])) {
+                // Exact match, like the DB unique index and the item form's
+                // unique rule — case-folding here would reject files the form
+                // (and the index) accepts.
+                if (isset($seenBarcode[$barcode])) {
                     $messages[] = 'Barcode "'.$barcode.'" appears on more than one row.';
                 }
-                $seenBarcode[$barcodeKey] = true;
+                $seenBarcode[$barcode] = true;
 
-                // Barcode collides with a different existing variant (matched by
-                // SKU). Uniqueness spans archived variants too.
-                if ($sku !== '' && $this->barcodeTakenByAnotherVariant($barcode, $sku)) {
-                    $messages[] = 'Barcode "'.$barcode.'" is already used by another product.';
+                // Collisions with existing variants are checked in one bulk
+                // query after the loop (barcodeCollisionErrors).
+                if ($sku !== '') {
+                    $barcodeRows[$line] = ['sku' => $sku, 'barcode' => $barcode];
                 }
             }
 
             if ($messages !== []) {
-                $errors[] = ['row' => $line, 'messages' => $messages];
+                $errorsByLine[$line] = $messages;
 
                 continue;
             }
@@ -348,9 +359,59 @@ class CsvInventoryImporter
             ];
         }
 
-        fclose($handle);
+        foreach ($this->barcodeCollisionErrors($barcodeRows) as $errorLine => $message) {
+            $errorsByLine[$errorLine][] = $message;
+        }
+
+        // Rows and errors stay disjoint (run() sums them for the row total), so
+        // a row failed only by the barcode check must leave $rows.
+        $rows = array_values(array_filter(
+            $rows,
+            fn (array $row) => ! isset($errorsByLine[$row['line']])
+        ));
+
+        ksort($errorsByLine);
+
+        $errors = [];
+        foreach ($errorsByLine as $errorLine => $messages) {
+            $errors[] = ['row' => $errorLine, 'messages' => $messages];
+        }
 
         return [$rows, $errors];
+    }
+
+    /**
+     * Barcodes already held by a different existing variant (identified by SKU;
+     * uniqueness spans archived variants, and a legacy SKU-less holder always
+     * counts as "different"). One chunked query for the whole file instead of
+     * one per row. Returns line => message.
+     *
+     * @param  array<int, array{sku: string, barcode: string}>  $barcodeRows
+     * @return array<int, string>
+     */
+    private function barcodeCollisionErrors(array $barcodeRows): array
+    {
+        if ($barcodeRows === []) {
+            return [];
+        }
+
+        $barcodes = array_values(array_unique(array_column($barcodeRows, 'barcode')));
+
+        // barcode => SKU of the variant holding it (unique index: at most one).
+        $ownerSkus = collect(array_chunk($barcodes, self::LOOKUP_CHUNK))
+            ->flatMap(fn (array $chunk) => Variant::whereIn('barcode', $chunk)->get(['barcode', 'sku']))
+            ->keyBy('barcode')
+            ->map(fn (Variant $variant) => $variant->sku);
+
+        $errors = [];
+
+        foreach ($barcodeRows as $line => $row) {
+            if ($ownerSkus->has($row['barcode']) && $ownerSkus->get($row['barcode']) !== $row['sku']) {
+                $errors[$line] = 'Barcode "'.$row['barcode'].'" is already used by another product.';
+            }
+        }
+
+        return $errors;
     }
 
     /**
@@ -370,21 +431,12 @@ class CsvInventoryImporter
      *     variant named; the unnamed+named (or multiple-unnamed) mix is rejected.
      *
      * @param  list<array<string, mixed>>  $rows
+     * @param  Collection<string, Variant>  $variantsBySku  from variantsBySku()
      * @return list<array{row: int|null, messages: list<string>}>
      */
-    private function validateCatalogShape(array $rows): array
+    private function validateCatalogShape(array $rows, Collection $variantsBySku): array
     {
         $errors = [];
-
-        // Existing variants that any row matches by SKU (exact match — both
-        // sides are canonically uppercase). Includes archived ones so we can
-        // reject them explicitly.
-        $skus = array_values(array_unique(array_column($rows, 'sku')));
-        $variantsBySku = collect(array_chunk($skus, self::LOOKUP_CHUNK))
-            ->flatMap(fn (array $chunk) => Variant::with(['item:id,name,archived_at,category_id', 'item.category:id,name'])
-                ->whereIn('sku', $chunk)
-                ->get(['id', 'sku', 'name', 'item_id', 'archived_at']))
-            ->keyBy('sku');
 
         // Existing items referenced by product name (case-insensitive), used to
         // resolve new-SKU rows and to reject archived-name matches.
@@ -424,7 +476,7 @@ class CsvInventoryImporter
 
                 // Item names are immutable: a product cell that disagrees with
                 // the SKU's item is a mistake, not a rename request.
-                if ($existing->item !== null && mb_strtolower($row['product']) !== mb_strtolower($existing->item->name)) {
+                if ($existing->item !== null && self::nameKey($row['product']) !== self::nameKey($existing->item->name)) {
                     $errors[] = ['row' => $row['line'], 'messages' => [
                         'SKU "'.$row['sku'].'" belongs to "'.$existing->item->name.'", but this row names the product "'
                         .$row['product'].'". The import can\'t rename products — fix the product cell.',
@@ -450,7 +502,7 @@ class CsvInventoryImporter
             }
 
             // Brand-new SKU: resolve the item it would attach to by name.
-            $item = $itemsByName->get(mb_strtolower($row['product']));
+            $item = $itemsByName->get(self::nameKey($row['product']));
 
             if ($item !== null && $item->archived_at !== null) {
                 $errors[] = ['row' => $row['line'], 'messages' => [
@@ -468,7 +520,7 @@ class CsvInventoryImporter
 
             // Brand-new item: it must not be filed under an archived category.
             if ($item === null && $row['category'] !== null) {
-                $categoryMatch = $categoriesByName->get(mb_strtolower($row['category']));
+                $categoryMatch = $categoriesByName->get(self::nameKey($row['category']));
 
                 if ($categoryMatch !== null && $categoryMatch->archived_at !== null) {
                     $errors[] = ['row' => $row['line'], 'messages' => [
@@ -479,7 +531,7 @@ class CsvInventoryImporter
                 }
             }
 
-            $key = $item !== null ? 'item:'.$item->getKey() : 'new:'.mb_strtolower($row['product']);
+            $key = $item !== null ? 'item:'.$item->getKey() : 'new:'.self::nameKey($row['product']);
             $groups[$key]['item'] ??= $item; // null for a to-be-created item
             $groups[$key]['rows'][] = $row;
         }
@@ -566,7 +618,7 @@ class CsvInventoryImporter
 
         $current = $item->category?->name;
 
-        if ($current !== null && mb_strtolower($row['category']) === mb_strtolower($current)) {
+        if ($current !== null && self::nameKey($row['category']) === self::nameKey($current)) {
             return null;
         }
 
@@ -599,7 +651,7 @@ class CsvInventoryImporter
 
                 // Categories match case-insensitively everywhere else, so a
                 // case-only difference is not a conflict.
-                $comparable = $field === 'category' ? mb_strtolower($value) : $value;
+                $comparable = $field === 'category' ? self::nameKey($value) : $value;
 
                 if ($first === null) {
                     $first = ['value' => $value, 'comparable' => $comparable, 'line' => $row['line']];
@@ -683,8 +735,42 @@ class CsvInventoryImporter
     }
 
     /**
-     * Fetch items whose lower(name) matches any of the given product names,
-     * keyed by lower(name), chunked to stay below SQLite's variable limit.
+     * Case-folded key for item/category name comparisons. ASCII-only
+     * strtolower() on purpose: it matches SQLite's NOCASE — the collation on
+     * items_name_unique and on every name query in this importer — so PHP and
+     * the database can never disagree about which names are "the same".
+     * mb_strtolower() folds more (e.g. "É" -> "é"), which would let a lookup
+     * miss an item the unique index then happily duplicates.
+     */
+    private static function nameKey(string $name): string
+    {
+        return strtolower($name);
+    }
+
+    /**
+     * Every variant matching the file's SKUs (exact match — both sides are
+     * canonically uppercase; archived included so validation can reject them
+     * explicitly), with item and category eager-loaded, keyed by SKU. Loaded
+     * once per import and shared by validateCatalogShape() and apply(), chunked
+     * to stay below SQLite's variable limit.
+     *
+     * @param  list<string>  $skus
+     * @return Collection<string, Variant>
+     */
+    private function variantsBySku(array $skus): Collection
+    {
+        $unique = array_values(array_unique($skus));
+
+        return collect(array_chunk($unique, self::LOOKUP_CHUNK))
+            ->flatMap(fn (array $chunk) => Variant::with('item.category')
+                ->whereIn('sku', $chunk)
+                ->get())
+            ->keyBy('sku');
+    }
+
+    /**
+     * Fetch items whose name matches any of the given product names (NOCASE),
+     * keyed by nameKey(), chunked to stay below SQLite's variable limit.
      * Empty input yields an empty collection.
      *
      * @param  list<string>  $productNames
@@ -693,7 +779,7 @@ class CsvInventoryImporter
     private function itemsByLowerName(array $productNames): Collection
     {
         $keys = array_values(array_unique(array_map(
-            fn (string $name) => mb_strtolower($name),
+            fn (string $name) => self::nameKey($name),
             $productNames
         )));
 
@@ -703,15 +789,15 @@ class CsvInventoryImporter
 
                 return Item::query()
                     ->with('category:id,name')
-                    ->whereRaw('lower(name) in ('.$placeholders.')', $chunk)
+                    ->whereRaw('name COLLATE NOCASE in ('.$placeholders.')', $chunk)
                     ->get(['id', 'name', 'archived_at', 'category_id']);
             })
-            ->keyBy(fn (Item $item) => mb_strtolower($item->name));
+            ->keyBy(fn (Item $item) => self::nameKey($item->name));
     }
 
     /**
-     * Fetch categories whose lower(name) matches any of the given names, keyed
-     * by lower(name). Null entries (blank cells) are skipped.
+     * Fetch categories whose name matches any of the given names (NOCASE),
+     * keyed by nameKey(). Null entries (blank cells) are skipped.
      *
      * @param  list<string|null>  $categoryNames
      * @return Collection<string, Category>
@@ -719,7 +805,7 @@ class CsvInventoryImporter
     private function categoriesByLowerName(array $categoryNames): Collection
     {
         $keys = array_values(array_unique(array_map(
-            fn (string $name) => mb_strtolower($name),
+            fn (string $name) => self::nameKey($name),
             array_filter($categoryNames, fn ($name) => $name !== null)
         )));
 
@@ -728,25 +814,28 @@ class CsvInventoryImporter
                 $placeholders = implode(',', array_fill(0, count($chunk), '?'));
 
                 return Category::query()
-                    ->whereRaw('lower(name) in ('.$placeholders.')', $chunk)
+                    ->whereRaw('name COLLATE NOCASE in ('.$placeholders.')', $chunk)
                     ->get(['id', 'name', 'archived_at']);
             })
-            ->keyBy(fn (Category $category) => mb_strtolower($category->name));
+            ->keyBy(fn (Category $category) => self::nameKey($category->name));
     }
 
     /**
      * Apply validated rows. Runs inside a transaction so a NegativeInventoryException
-     * (re-thrown as ImportRowException) rolls the whole batch back.
+     * (re-thrown as ImportRowException) rolls the whole batch back. Matched
+     * variants come from the collection already loaded for validation instead
+     * of a per-row query.
      *
      * @param  list<array<string, mixed>>  $rows
+     * @param  Collection<string, Variant>  $variantsBySku  from variantsBySku()
      */
-    private function apply(array $rows, User $user, bool $canViewCost, string $importId): void
+    private function apply(array $rows, User $user, bool $canViewCost, string $importId, Collection $variantsBySku): void
     {
         $categoryCache = [];
         $itemCache = [];
 
         foreach ($rows as $row) {
-            $variant = Variant::where('sku', $row['sku'])->first();
+            $variant = $variantsBySku->get($row['sku']);
 
             if ($variant === null) {
                 $item = $this->resolveItem($row, $itemCache, $categoryCache);
@@ -839,13 +928,13 @@ class CsvInventoryImporter
             return null;
         }
 
-        $key = mb_strtolower($name);
+        $key = self::nameKey($name);
 
         if (isset($cache[$key])) {
             return $cache[$key];
         }
 
-        $category = Category::whereRaw('lower(name) = ?', [$key])->first()
+        $category = Category::whereRaw('name = ? COLLATE NOCASE', [$name])->first()
             ?? Category::create(['name' => $name]);
 
         return $cache[$key] = $category->getKey();
@@ -866,14 +955,14 @@ class CsvInventoryImporter
      */
     private function resolveItem(array $row, array &$itemCache, array &$categoryCache): Item
     {
-        $key = mb_strtolower($row['product']);
+        $key = self::nameKey($row['product']);
 
         if (isset($itemCache[$key])) {
             return $itemCache[$key];
         }
 
         $item = Item::active()
-            ->whereRaw('lower(name) = ?', [$key])
+            ->whereRaw('name = ? COLLATE NOCASE', [$row['product']])
             ->first()
             ?? Item::create([
                 'name' => $row['product'],
@@ -883,16 +972,6 @@ class CsvInventoryImporter
             ]);
 
         return $itemCache[$key] = $item;
-    }
-
-    private function barcodeTakenByAnotherVariant(string $barcode, string $sku): bool
-    {
-        // whereNull guards the (historical) SKU-less variant: `sku != ?` is
-        // NULL — not true — for those rows, which would hide their barcodes
-        // from this check and blow up on the unique index at save time.
-        return Variant::where('barcode', $barcode)
-            ->where(fn ($query) => $query->whereNull('sku')->orWhere('sku', '!=', $sku))
-            ->exists();
     }
 
     /**
