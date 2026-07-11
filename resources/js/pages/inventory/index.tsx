@@ -207,7 +207,7 @@ export default function InventoryIndex({
                                             <TableRow
                                                 className={
                                                     hasLowStock && !item.archived_at
-                                                        ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/60'
+                                                        ? 'bg-red-200 hover:bg-red-300 dark:bg-red-900/60 dark:hover:bg-red-800/60'
                                                         : undefined
                                                 }
                                             >
@@ -282,7 +282,7 @@ export default function InventoryIndex({
                                                                                 key={variant.id}
                                                                                 className={
                                                                                     isLow
-                                                                                        ? 'bg-red-50 hover:bg-red-50 dark:bg-red-950/40 dark:hover:bg-red-950/40'
+                                                                                        ? 'bg-red-200 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900/60'
                                                                                         : 'hover:bg-transparent'
                                                                                 }
                                                                             >
