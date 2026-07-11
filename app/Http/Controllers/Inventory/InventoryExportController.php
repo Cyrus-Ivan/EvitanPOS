@@ -41,7 +41,7 @@ class InventoryExportController extends Controller
                             'category' => $variant->item->category?->name ?? '',
                             'product' => $variant->item->name,
                             'variant' => $variant->name,
-                            'sku' => $variant->sku ?? '',
+                            'sku' => $variant->sku,
                             'barcode' => $variant->barcode ?? '',
                             'selling_price' => $variant->selling_price,
                             'cost' => $includeCost ? ($variant->cost ?? '') : '',
@@ -49,8 +49,11 @@ class InventoryExportController extends Controller
                             'unit' => $variant->item->unit,
                             'description' => $variant->item->description ?? '',
                             'low_stock_threshold' => $variant->low_stock_threshold,
-                            // Re-importing with the exact counts restores state.
-                            'mode' => InventoryCsvSchema::MODE_REPLACE,
+                            // Left blank on purpose: an unedited re-import must not
+                            // silently overwrite live stock. The user has to pick a
+                            // mode per row (mode is required on import), which forces
+                            // a deliberate choice between replacing and adding stock.
+                            'mode' => '',
                         ];
 
                         fputcsv($out, array_map(fn (string $column) => (string) $row[$column], $headers), escape: '');

@@ -115,8 +115,10 @@ class ItemController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $item) {
+            // `name` is deliberately absent: item names are immutable after
+            // creation (UpdateItemRequest rejects a differing name; even a
+            // case-only resubmission must not drift the stored value).
             $item->update([
-                'name' => $data['name'],
                 'unit' => $data['unit'],
                 'category_id' => $data['category_id'] ?? null,
                 'description' => $data['description'] ?? null,

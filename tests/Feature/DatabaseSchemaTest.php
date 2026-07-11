@@ -44,6 +44,7 @@ class DatabaseSchemaTest extends TestCase
         Variant::create([
             'item_id' => (string) Str::uuid(), // non-existent item
             'name' => 'Orphan',
+            'sku' => 'ORPHAN-1',
             'selling_price' => 10.00,
         ]);
     }
@@ -57,19 +58,46 @@ class DatabaseSchemaTest extends TestCase
         User::factory()->create(['username' => 'duplicate']);
     }
 
-    public function test_sku_and_barcode_are_unique_when_provided_but_allow_multiple_nulls()
+    public function test_sku_is_required_and_unique()
     {
         $item = $this->makeItem();
 
-        // Multiple NULL sku/barcode are allowed.
-        Variant::create(['item_id' => $item->id, 'name' => 'A', 'selling_price' => 1]);
-        Variant::create(['item_id' => $item->id, 'name' => 'B', 'selling_price' => 1]);
-
         Variant::create(['item_id' => $item->id, 'name' => 'C', 'selling_price' => 1, 'sku' => 'SKU-1']);
+
+        try {
+            Variant::create(['item_id' => $item->id, 'name' => 'A', 'selling_price' => 1]);
+            $this->fail('A variant without a SKU should violate NOT NULL.');
+        } catch (QueryException) {
+            // expected: sku is NOT NULL
+        }
 
         $this->expectException(QueryException::class);
 
         Variant::create(['item_id' => $item->id, 'name' => 'D', 'selling_price' => 1, 'sku' => 'SKU-1']);
+    }
+
+    public function test_barcode_is_unique_when_provided_but_allows_multiple_nulls()
+    {
+        $item = $this->makeItem();
+
+        // Multiple NULL barcodes are allowed.
+        Variant::create(['item_id' => $item->id, 'name' => 'A', 'sku' => 'BC-A', 'selling_price' => 1]);
+        Variant::create(['item_id' => $item->id, 'name' => 'B', 'sku' => 'BC-B', 'selling_price' => 1]);
+
+        Variant::create(['item_id' => $item->id, 'name' => 'C', 'sku' => 'BC-C', 'selling_price' => 1, 'barcode' => '123']);
+
+        $this->expectException(QueryException::class);
+
+        Variant::create(['item_id' => $item->id, 'name' => 'D', 'sku' => 'BC-D', 'selling_price' => 1, 'barcode' => '123']);
+    }
+
+    public function test_variant_sku_is_stored_uppercase()
+    {
+        $item = $this->makeItem();
+
+        $variant = Variant::create(['item_id' => $item->id, 'name' => 'A', 'sku' => ' abc-1 ', 'selling_price' => 1]);
+
+        $this->assertSame('ABC-1', $variant->fresh()->sku);
     }
 
     public function test_users_use_soft_deletes()
@@ -100,7 +128,7 @@ class DatabaseSchemaTest extends TestCase
     public function test_inventory_ledger_has_no_updated_at()
     {
         $item = $this->makeItem();
-        $variant = Variant::create(['item_id' => $item->id, 'name' => 'V', 'selling_price' => 5]);
+        $variant = Variant::create(['item_id' => $item->id, 'name' => 'V', 'sku' => 'LEDGER-1', 'selling_price' => 5]);
         $user = User::factory()->create();
 
         $entry = InventoryLedger::create([

@@ -57,7 +57,8 @@ export interface Variant {
     item_id: string;
     // Null for a single-product ("no variant") item; falls back to the item name.
     name: string | null;
-    sku: string | null;
+    // Mandatory and stored uppercase.
+    sku: string;
     barcode: string | null;
     selling_price: string;
     // Present only for the Owner — stripped server-side for everyone else.

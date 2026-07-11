@@ -37,7 +37,7 @@ abstract class ItemRequest extends FormRequest
 
             $rules["variants.$index.id"] = ['nullable', 'string', 'exists:variants,id'];
             $rules["variants.$index.name"] = ['nullable', 'string', 'max:255'];
-            $rules["variants.$index.sku"] = ['nullable', 'string', 'max:255', Rule::unique('variants', 'sku')->ignore($id)];
+            $rules["variants.$index.sku"] = ['required', 'string', 'max:255', Rule::unique('variants', 'sku')->ignore($id)];
             $rules["variants.$index.barcode"] = ['nullable', 'string', 'max:255', Rule::unique('variants', 'barcode')->ignore($id)];
             $rules["variants.$index.selling_price"] = ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'];
             $rules["variants.$index.low_stock_threshold"] = ['nullable', 'integer', 'min:0'];
@@ -68,10 +68,14 @@ abstract class ItemRequest extends FormRequest
 
                 // Blank SKU/barcode -> null. SQLite treats NULLs as distinct, so a
                 // blank barcode never collides and never blocks the sale/save.
+                // SKUs are canonically UPPERCASE — normalizing here means the
+                // unique rule and the in-payload duplicate check both operate on
+                // the value that will actually be stored.
                 foreach (['sku', 'barcode'] as $field) {
                     if (array_key_exists($field, $variant)) {
                         $value = is_string($variant[$field]) ? trim($variant[$field]) : $variant[$field];
-                        $variant[$field] = ($value === '' || $value === null) ? null : $value;
+                        $value = ($value === '' || $value === null) ? null : $value;
+                        $variant[$field] = ($field === 'sku' && $value !== null) ? mb_strtoupper($value) : $value;
                     }
                 }
 
@@ -93,6 +97,7 @@ abstract class ItemRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $this->validateUniqueItemName($validator);
             $this->validateNoDuplicateIdentifiers($validator);
+            $this->validateVariantNaming($validator);
             $this->afterValidation($validator);
         });
     }
@@ -147,6 +152,32 @@ abstract class ItemRequest extends FormRequest
                 }
 
                 $seen[$value] = true;
+            }
+        }
+    }
+
+    /**
+     * A variant with a blank (null) name is the "no variant" case and is only
+     * valid as an item's sole variant. So once an item has more than one variant,
+     * every variant must be named — mirroring the importer (CsvInventoryImporter)
+     * and keeping the catalog free of the illegal unnamed+named mix.
+     */
+    private function validateVariantNaming(Validator $validator): void
+    {
+        $variants = (array) $this->input('variants', []);
+
+        if (count($variants) < 2) {
+            return; // a lone unnamed variant is the valid "no variant" item
+        }
+
+        foreach ($variants as $index => $variant) {
+            $name = is_array($variant) ? ($variant['name'] ?? null) : null;
+
+            if ($name === null || trim((string) $name) === '') {
+                $validator->errors()->add(
+                    "variants.$index.name",
+                    "Give every variant a name — an item with more than one variant can't have a blank (no-variant) row."
+                );
             }
         }
     }

@@ -89,6 +89,10 @@ final class InventoryCsvSchema
      */
     public static function normalizeHeader(string $header): string
     {
+        // Excel's "CSV UTF-8" prepends a BOM to the file, which lands on the
+        // first header cell; trim() does not remove it, so strip it explicitly
+        // or the first column is silently unrecognized.
+        $header = (string) preg_replace('/^\x{FEFF}/u', '', $header);
         $header = strtolower(trim($header));
 
         return (string) preg_replace('/[\s-]+/', '_', $header);

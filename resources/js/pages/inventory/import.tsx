@@ -39,6 +39,7 @@ interface ImportHistoryRow {
 const MODE_LABELS: Record<string, string> = {
     replace_stock_count: 'Replace stock count',
     add_to_current_stock: 'Add to current stock',
+    mixed: 'Mixed',
 };
 
 function StatusBadge({ status }: { status: ImportHistoryRow['status'] }) {

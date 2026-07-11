@@ -19,7 +19,9 @@ class VariantFactory extends Factory
         return [
             'item_id' => Item::factory(),
             'name' => fake()->randomElement(['Default', 'Small', 'Medium', 'Large']),
-            'sku' => fake()->unique()->bothify('SKU-####??'),
+            // Uppercased to match the canonical stored form (bothify's ?? are
+            // lowercase-only, so uppercasing keeps unique() collision-safe).
+            'sku' => strtoupper(fake()->unique()->bothify('SKU-####??')),
             'barcode' => fake()->boolean(70) ? fake()->unique()->ean13() : null,
             'selling_price' => fake()->randomFloat(2, 1, 999),
             'cost' => fake()->randomFloat(2, 1, 500),

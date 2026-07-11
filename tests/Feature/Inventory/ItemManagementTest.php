@@ -92,7 +92,7 @@ class ItemManagementTest extends TestCase
 
     public function test_editing_keeps_a_no_variant_row_matched_not_recreated()
     {
-        $item = Item::factory()->create();
+        $item = Item::factory()->create(['name' => 'Widget']);
         $variant = Variant::factory()->for($item)->create(['name' => null, 'sku' => 'SOLO-3']);
 
         $this->actingAs(User::factory()->owner()->create())
@@ -156,16 +156,51 @@ class ItemManagementTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
-    public function test_renaming_an_item_to_another_items_name_is_rejected()
+    public function test_renaming_an_item_is_rejected()
     {
-        Item::factory()->create(['name' => 'Taken Name']);
         $item = Item::factory()->create(['name' => 'Original']);
+        Variant::factory()->for($item)->create();
 
         $this->actingAs(User::factory()->owner()->create())
-            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'Taken Name']))
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'A Different Name']))
             ->assertSessionHasErrors('name');
 
         $this->assertSame('Original', $item->fresh()->name);
+    }
+
+    public function test_resubmitting_the_items_own_name_with_different_case_is_accepted_and_name_unchanged()
+    {
+        $item = Item::factory()->create(['name' => 'Widget']);
+        Variant::factory()->for($item)->create();
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'WIDGET']))
+            ->assertSessionHasNoErrors();
+
+        // Immutable means even casing never drifts.
+        $this->assertSame('Widget', $item->fresh()->name);
+    }
+
+    public function test_variant_sku_is_required()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload([], [
+                ['name' => 'Default', 'sku' => '', 'barcode' => null, 'selling_price' => '10.00', 'low_stock_threshold' => 0, 'cost' => null],
+            ]))
+            ->assertSessionHasErrors('variants.0.sku');
+
+        $this->assertSame(0, Item::count());
+    }
+
+    public function test_variant_sku_is_stored_uppercase()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload([], [
+                ['name' => 'Default', 'sku' => 'wid-001', 'barcode' => null, 'selling_price' => '10.00', 'low_stock_threshold' => 0, 'cost' => null],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('WID-001', Item::first()->variants()->sole()->sku);
     }
 
     public function test_create_form_renders()
@@ -214,7 +249,7 @@ class ItemManagementTest extends TestCase
 
     public function test_editing_updates_a_matched_variant()
     {
-        $item = Item::factory()->create();
+        $item = Item::factory()->create(['name' => 'Widget']);
         $variant = Variant::factory()->for($item)->create(['selling_price' => '10.00']);
 
         $this->actingAs(User::factory()->owner()->create())
@@ -237,7 +272,7 @@ class ItemManagementTest extends TestCase
 
     public function test_omitting_a_variant_archives_it_and_adds_new_one()
     {
-        $item = Item::factory()->create();
+        $item = Item::factory()->create(['name' => 'Widget']);
         $keep = Variant::factory()->for($item)->create(['sku' => 'KEEP']);
         $drop = Variant::factory()->for($item)->create(['sku' => 'DROP']);
 
@@ -268,6 +303,79 @@ class ItemManagementTest extends TestCase
         $this->assertNull($keep->fresh()->archived_at);
         $this->assertDatabaseHas('variants', ['sku' => 'NEW-001', 'item_id' => $item->id, 'archived_at' => null]);
         $this->assertSame(2, $item->variants()->active()->count());
+    }
+
+    public function test_multi_variant_item_rejects_a_blank_variant_name()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->itemPayload([], [
+                ['name' => 'Small', 'sku' => 'S-1', 'barcode' => null, 'selling_price' => '10.00', 'low_stock_threshold' => 0, 'cost' => null],
+                ['name' => null, 'sku' => 'S-2', 'barcode' => null, 'selling_price' => '10.00', 'low_stock_threshold' => 0, 'cost' => null],
+            ]))
+            ->assertSessionHasErrors('variants.1.name');
+
+        $this->assertSame(0, Item::count());
+    }
+
+    public function test_adding_a_variant_to_a_no_variant_item_requires_naming_the_existing_one()
+    {
+        $item = Item::factory()->create(['name' => 'Bottled Water']);
+        $existing = Variant::factory()->for($item)->create(['name' => null, 'sku' => 'WATER-1']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'Bottled Water'], [
+                [
+                    'id' => $existing->id,
+                    'name' => null, // left unnamed while a second variant is added
+                    'sku' => 'WATER-1',
+                    'barcode' => null,
+                    'selling_price' => '10.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+                [
+                    'name' => '500ml',
+                    'sku' => 'WATER-500',
+                    'barcode' => null,
+                    'selling_price' => '12.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+            ]))
+            ->assertSessionHasErrors('variants.0.name');
+
+        $this->assertSame(1, $item->variants()->active()->count());
+    }
+
+    public function test_naming_the_existing_variant_and_adding_another_succeeds()
+    {
+        $item = Item::factory()->create(['name' => 'Bottled Water']);
+        $existing = Variant::factory()->for($item)->create(['name' => null, 'sku' => 'WATER-1']);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('items.update', $item->id), $this->itemPayload(['name' => 'Bottled Water'], [
+                [
+                    'id' => $existing->id,
+                    'name' => '330ml',
+                    'sku' => 'WATER-1',
+                    'barcode' => null,
+                    'selling_price' => '10.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+                [
+                    'name' => '500ml',
+                    'sku' => 'WATER-500',
+                    'barcode' => null,
+                    'selling_price' => '12.00',
+                    'low_stock_threshold' => 0,
+                    'cost' => null,
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(2, $item->variants()->active()->count());
+        $this->assertSame('330ml', $existing->fresh()->name);
     }
 
     public function test_item_can_be_archived_and_restored()

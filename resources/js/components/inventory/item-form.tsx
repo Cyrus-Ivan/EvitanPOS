@@ -167,7 +167,10 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
                             onChange={(e) => setData('name', e.target.value)}
                             required
                             placeholder="e.g. Coca-Cola 1.5L"
+                            readOnly={isEdit}
+                            className={isEdit ? 'bg-muted text-muted-foreground' : undefined}
                         />
+                        {isEdit && <p className="text-muted-foreground text-xs">Item names can’t be changed after creation.</p>}
                         <InputError message={errors.name} />
                     </div>
 
@@ -274,6 +277,7 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
                                             value={variant.name}
                                             onChange={(e) => setVariant(index, 'name', e.target.value)}
                                             placeholder="e.g. Small, Large"
+                                            required
                                         />
                                         <InputError message={err[`variants.${index}.name`]} />
                                     </div>
@@ -281,11 +285,14 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
 
                                 <div className="grid gap-2">
                                     <Label htmlFor={`variant-${index}-sku`}>SKU</Label>
+                                    {/* SKUs are stored uppercase; normalize as the user types
+                                        (the server re-normalizes regardless). */}
                                     <Input
                                         id={`variant-${index}-sku`}
                                         value={variant.sku}
-                                        onChange={(e) => setVariant(index, 'sku', e.target.value)}
-                                        placeholder="Optional"
+                                        onChange={(e) => setVariant(index, 'sku', e.target.value.toUpperCase())}
+                                        placeholder="e.g. WATER-500"
+                                        required
                                     />
                                     <InputError message={err[`variants.${index}.sku`]} />
                                 </div>

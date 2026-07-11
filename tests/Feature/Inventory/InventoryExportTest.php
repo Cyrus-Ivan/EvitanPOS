@@ -59,6 +59,21 @@ class InventoryExportTest extends TestCase
         $this->assertStringContainsString('CHIPS-1', $content);
     }
 
+    public function test_export_leaves_the_mode_column_blank()
+    {
+        $this->seedVariant();
+
+        $content = $this->actingAs(User::factory()->owner()->create())
+            ->get(route('inventory.export'))
+            ->streamedContent();
+
+        // mode is deliberately blank so an unedited re-import can't silently
+        // overwrite live stock — the last cell of the data row is empty.
+        $this->assertStringNotContainsString('replace_stock_count', $content);
+        $dataRow = explode("\n", trim($content))[1];
+        $this->assertStringEndsWith(',', rtrim($dataRow, "\r"));
+    }
+
     public function test_archived_variants_are_excluded_from_export()
     {
         $this->seedVariant();

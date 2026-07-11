@@ -31,7 +31,9 @@ class VariantUniquenessTest extends TestCase
     {
         return array_merge([
             'name' => 'Default',
-            'sku' => null,
+            // SKU is mandatory, so the default is a unique value; tests that
+            // exercise SKU behavior override it explicitly.
+            'sku' => 'SKU-'.fake()->unique()->numerify('####'),
             'barcode' => null,
             'selling_price' => '10.00',
             'low_stock_threshold' => 0,
@@ -84,7 +86,7 @@ class VariantUniquenessTest extends TestCase
 
     public function test_updating_a_variant_ignores_its_own_sku()
     {
-        $item = Item::factory()->create();
+        $item = Item::factory()->create(['name' => 'Widget']);
         $variant = Variant::factory()->for($item)->create(['sku' => 'KEEP-ME']);
 
         $this->actingAs(User::factory()->owner()->create())
@@ -99,6 +101,27 @@ class VariantUniquenessTest extends TestCase
                 ],
             ]))
             ->assertSessionHasNoErrors();
+    }
+
+    public function test_blank_sku_is_rejected()
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->payload([$this->variant(['sku' => ''])]))
+            ->assertSessionHasErrors('variants.0.sku');
+
+        $this->assertSame(0, Item::count());
+    }
+
+    public function test_sku_uniqueness_is_case_insensitive()
+    {
+        $other = Item::factory()->create();
+        Variant::factory()->for($other)->create(['sku' => 'TAKEN']);
+
+        // Input is uppercased before the unique check, so "taken" collides
+        // with the stored "TAKEN".
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('items.store'), $this->payload([$this->variant(['sku' => 'taken'])]))
+            ->assertSessionHasErrors('variants.0.sku');
     }
 
     public function test_sku_uniqueness_holds_against_archived_variants()

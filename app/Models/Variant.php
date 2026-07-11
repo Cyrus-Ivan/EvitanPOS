@@ -41,6 +41,24 @@ class Variant extends Model
     }
 
     /**
+     * SKUs are canonically UPPERCASE (trimmed). This mutator is the persistence
+     * backstop — entry points (ItemRequest, CsvInventoryImporter) normalize
+     * before querying, and anything that slips through is normalized on save.
+     * Null/blank passes through as null so the DB NOT NULL constraint, not the
+     * mutator, is the failure point for a missing SKU.
+     *
+     * @return Attribute<never, ?string>
+     */
+    protected function sku(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value) => ($value === null || trim($value) === '')
+                ? null
+                : mb_strtoupper(trim($value)),
+        );
+    }
+
+    /**
      * @return BelongsTo<Item, $this>
      */
     public function item(): BelongsTo

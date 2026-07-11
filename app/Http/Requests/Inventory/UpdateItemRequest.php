@@ -8,13 +8,23 @@ use Illuminate\Validation\Validator;
 class UpdateItemRequest extends ItemRequest
 {
     /**
-     * A submitted variant `id` must belong to the item being edited — never
+     * Two update-only rules: item names are immutable after creation, and a
+     * submitted variant `id` must belong to the item being edited — never
      * allow reassigning another item's variant by forging its id.
      */
     protected function afterValidation(Validator $validator): void
     {
         /** @var Item $item */
         $item = $this->route('item');
+
+        // Item names are immutable. The form disables the field, so this only
+        // trips on a forged request; resubmitting the current name (any case)
+        // passes because the stored name is kept either way.
+        $name = trim((string) $this->input('name'));
+        if ($name !== '' && mb_strtolower($name) !== mb_strtolower($item->name)) {
+            $validator->errors()->add('name', "An item's name can't be changed after it is created.");
+        }
+
         $ownedIds = $item->variants()->pluck('id')->all();
 
         foreach ((array) $this->input('variants', []) as $index => $variant) {
