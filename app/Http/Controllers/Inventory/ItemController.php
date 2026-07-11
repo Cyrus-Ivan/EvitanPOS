@@ -32,11 +32,8 @@ class ItemController extends Controller
             ])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhereHas('variants', function ($variant) use ($search) {
-                            $variant->where('sku', 'like', "%{$search}%")
-                                ->orWhere('barcode', 'like', "%{$search}%");
-                        });
+                    $query->whereLike('name', $search)
+                        ->orWhereHas('variants', fn ($variant) => $variant->whereLikeAny(['sku', 'barcode'], $search));
                 });
             })
             ->when($categoryId, fn ($query) => $query->where('category_id', $categoryId))

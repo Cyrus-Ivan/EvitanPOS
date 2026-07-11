@@ -37,12 +37,7 @@ class UserController extends Controller
             ->when($status === 'active', fn ($query) => $query->whereNull('deleted_at'))
             ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
             ->when($status === 'all', fn ($query) => $query->withTrashed())
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('username', 'like', "%{$search}%");
-                });
-            })
+            ->when($search, fn ($query) => $query->whereLikeAny(['name', 'username'], $search))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString()

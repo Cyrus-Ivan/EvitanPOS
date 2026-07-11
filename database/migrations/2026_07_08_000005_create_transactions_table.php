@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            // Human-readable, format YYYYMMDD-000001, sequence resets daily.
+            // Human-readable, format YYYYMMDD-HHMMSS-000001, sequence resets daily.
             $table->string('transaction_number')->unique();
             // Receipt number equals the transaction number.
             $table->string('receipt_number');

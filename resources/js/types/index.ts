@@ -150,3 +150,29 @@ export interface ManagedUser {
     deleted_at: string | null;
     created_at: string;
 }
+
+// Point of Sale (Phase 8).
+export type PaymentType = 'cash' | 'online' | 'others';
+export type DiscountType = 'amount' | 'percentage';
+
+// A sellable product tile in the POS grid / scan lookup. Cost is Owner-only and
+// deliberately absent — the server never sends it here.
+export interface PosProduct {
+    id: string;
+    label: string;
+    sku: string | null;
+    barcode: string | null;
+    selling_price: string;
+    current_stock: number;
+    unit: string;
+}
+
+// A line in the client-side cart. unit_price and max_stock are UI-only; only
+// variant_id + quantity are sent to the server, which recomputes all money.
+export interface CartLine {
+    variant_id: string;
+    label: string;
+    unit_price: number;
+    quantity: number;
+    max_stock: number;
+}

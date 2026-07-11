@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Support\Auth\SessionManager;
+use App\Support\Search\LikeQuery;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAuthorizationGates();
+
+        // Wildcard-safe LIKE search macros (whereLike / orWhereLike / whereLikeAny).
+        LikeQuery::registerMacros();
 
         // Mint a fresh boot id on every launch. A session stamped with an older
         // id (see EnforceBootSession) outlived the run that created it — i.e. the

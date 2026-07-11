@@ -1,17 +1,358 @@
 import EmptyState from '@/components/empty-state';
+import Pagination from '@/components/pagination';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { ShoppingCart } from 'lucide-react';
+import { formatPeso } from '@/lib/money';
+import { cn } from '@/lib/utils';
+import type { BreadcrumbItem, CartLine, DiscountType, Paginated, PaymentType, PosProduct } from '@/types';
+import { Head, router } from '@inertiajs/react';
+import { Minus, Package, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Point of Sale', href: '/pos' }];
 
-export default function Pos() {
+interface Filters {
+    search: string | null;
+}
+
+const PAYMENT_LABELS: Record<PaymentType, string> = {
+    cash: 'Cash',
+    online: 'Online',
+    others: 'Others',
+};
+
+export default function Pos({ products, filters }: { products: Paginated<PosProduct>; filters: Filters }) {
+    const [search, setSearch] = useState(filters.search ?? '');
+    const [cart, setCart] = useState<CartLine[]>([]);
+    const [discountType, setDiscountType] = useState<DiscountType>('amount');
+    const [discountInput, setDiscountInput] = useState('');
+    const [paymentType, setPaymentType] = useState<PaymentType>('cash');
+    const [cashReceived, setCashReceived] = useState('');
+    const [processing, setProcessing] = useState(false);
+
+    const addToCart = (product: PosProduct) => {
+        if (product.current_stock <= 0) {
+            return;
+        }
+        setCart((prev) => {
+            const existing = prev.find((line) => line.variant_id === product.id);
+            if (existing) {
+                // Never let the client cart exceed on-hand; the ledger is the real
+                // guard, this is just a UX cap.
+                return prev.map((line) =>
+                    line.variant_id === product.id ? { ...line, quantity: Math.min(line.quantity + 1, line.max_stock) } : line,
+                );
+            }
+            return [
+                ...prev,
+                {
+                    variant_id: product.id,
+                    label: product.label,
+                    unit_price: Number(product.selling_price),
+                    quantity: 1,
+                    max_stock: product.current_stock,
+                },
+            ];
+        });
+    };
+
+    const setQuantity = (variantId: string, quantity: number) => {
+        setCart((prev) =>
+            prev.map((line) => (line.variant_id === variantId ? { ...line, quantity: Math.max(1, Math.min(quantity, line.max_stock)) } : line)),
+        );
+    };
+
+    const removeLine = (variantId: string) => setCart((prev) => prev.filter((line) => line.variant_id !== variantId));
+
+    // Search box doubles as a barcode-scan input: on Enter/click we first try an
+    // exact barcode/SKU lookup and drop a match straight into the cart; anything
+    // else falls through to a grid search. No per-keystroke requests.
+    const runSearch = async () => {
+        const code = search.trim();
+
+        if (code) {
+            try {
+                const response = await fetch(route('pos.lookup', { code }), { headers: { Accept: 'application/json' } });
+                const { variant } = (await response.json()) as { variant: PosProduct | null };
+                if (variant && variant.current_stock > 0) {
+                    addToCart(variant);
+                    setSearch('');
+                    return;
+                }
+            } catch {
+                // Ignore and fall back to a normal grid search.
+            }
+        }
+
+        router.get(
+            route('pos'),
+            { search: code || undefined },
+            { preserveState: true, preserveScroll: true, replace: true, only: ['products', 'filters'] },
+        );
+    };
+
+    const subtotal = useMemo(() => cart.reduce((sum, line) => sum + line.unit_price * line.quantity, 0), [cart]);
+    const discountNum = Number(discountInput) || 0;
+    const discountValue = discountType === 'percentage' ? (subtotal * Math.min(discountNum, 100)) / 100 : Math.min(discountNum, subtotal);
+    const total = Math.max(subtotal - discountValue, 0);
+    const cashNum = Number(cashReceived) || 0;
+    const change = cashNum - total;
+    const insufficientCash = paymentType === 'cash' && cashNum < total;
+
+    const checkout = () => {
+        if (cart.length === 0 || processing) {
+            return;
+        }
+
+        setProcessing(true);
+        router.post(
+            route('pos.checkout'),
+            {
+                lines: cart.map((line) => ({ variant_id: line.variant_id, quantity: line.quantity })),
+                payment_type: paymentType,
+                discount: discountNum > 0 ? discountNum : 0,
+                discount_type: discountNum > 0 ? discountType : null,
+                cash_received: paymentType === 'cash' ? cashNum : null,
+            },
+            {
+                preserveScroll: true,
+                // Inertia updates props without remounting the page, so the cart
+                // state is not auto-reset — clear it here on success.
+                onSuccess: () => {
+                    setCart([]);
+                    setDiscountInput('');
+                    setCashReceived('');
+                },
+                // Show the first error regardless of its key — per-line failures
+                // are keyed lines.0.variant_id etc., not a flat `lines`.
+                onError: (errors) => toast.error(Object.values(errors)[0] ?? 'Checkout failed.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Point of Sale" />
-            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-                <EmptyState icon={ShoppingCart} title="Point of Sale" description="The checkout screen where cashiers ring up sales. Arrives in Phase 8." />
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4 lg:flex-row lg:items-start">
+                {/* Left: product search + grid */}
+                <div className="flex flex-1 flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                            <Input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        void runSearch();
+                                    }
+                                }}
+                                placeholder="Search or scan — name, SKU, barcode"
+                                className="pl-8"
+                                autoFocus
+                            />
+                        </div>
+                        <Button variant="outline" onClick={() => void runSearch()}>
+                            Search
+                        </Button>
+                    </div>
+
+                    {products.data.length === 0 ? (
+                        <EmptyState
+                            icon={Package}
+                            title="No products found"
+                            description={filters.search ? 'Try a different search term.' : 'Add items to the catalog to start selling.'}
+                        />
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                            {products.data.map((product) => {
+                                const outOfStock = product.current_stock <= 0;
+                                return (
+                                    <button
+                                        key={product.id}
+                                        type="button"
+                                        disabled={outOfStock}
+                                        onClick={() => addToCart(product)}
+                                        className={cn(
+                                            'flex min-h-28 flex-col rounded-lg border p-3 text-left transition',
+                                            outOfStock
+                                                ? 'cursor-not-allowed opacity-50'
+                                                : 'hover:border-primary hover:bg-accent focus-visible:border-primary focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-none',
+                                        )}
+                                    >
+                                        <span className="line-clamp-2 font-medium">{product.label}</span>
+                                        <span className="text-muted-foreground mt-0.5 text-xs tabular-nums">{product.sku ?? '—'}</span>
+                                        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                                            <span className="font-semibold tabular-nums">{formatPeso(product.selling_price)}</span>
+                                            <Badge variant={outOfStock ? 'destructive' : 'secondary'} className="font-normal">
+                                                {outOfStock ? 'Out' : `${product.current_stock} ${product.unit}`}
+                                            </Badge>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <Pagination links={products.links} />
+                </div>
+
+                {/* Right: cart + totals + payment */}
+                <Card className="w-full shrink-0 p-4 lg:sticky lg:top-4 lg:w-96">
+                    <div className="flex items-center gap-2 font-semibold">
+                        <ShoppingCart className="size-4" /> Cart
+                        {cart.length > 0 && <Badge variant="secondary">{cart.length}</Badge>}
+                    </div>
+
+                    <Separator className="my-3" />
+
+                    {cart.length === 0 ? (
+                        <p className="text-muted-foreground py-8 text-center text-sm">Cart is empty. Search or scan a product to begin.</p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {cart.map((line) => (
+                                <div key={line.variant_id} className="flex items-start gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium">{line.label}</p>
+                                        <p className="text-muted-foreground text-xs tabular-nums">
+                                            {formatPeso(line.unit_price)} × {line.quantity} = {formatPeso(line.unit_price * line.quantity)}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="size-7"
+                                            aria-label="Decrease quantity"
+                                            onClick={() => setQuantity(line.variant_id, line.quantity - 1)}
+                                            disabled={line.quantity <= 1}
+                                        >
+                                            <Minus className="size-3" />
+                                        </Button>
+                                        <Input
+                                            value={line.quantity}
+                                            onChange={(e) => setQuantity(line.variant_id, Number(e.target.value) || 1)}
+                                            inputMode="numeric"
+                                            className="h-7 w-12 px-1 text-center tabular-nums"
+                                            aria-label="Quantity"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="size-7"
+                                            aria-label="Increase quantity"
+                                            onClick={() => setQuantity(line.variant_id, line.quantity + 1)}
+                                            disabled={line.quantity >= line.max_stock}
+                                        >
+                                            <Plus className="size-3" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-muted-foreground size-7"
+                                            aria-label="Remove item"
+                                            onClick={() => removeLine(line.variant_id)}
+                                        >
+                                            <Trash2 className="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <Separator className="my-3" />
+
+                    {/* Discount */}
+                    <div className="flex items-center gap-2">
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            value={discountType}
+                            onValueChange={(value) => value && setDiscountType(value as DiscountType)}
+                        >
+                            <ToggleGroupItem value="amount" className="px-3" aria-label="Amount discount">
+                                ₱
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="percentage" className="px-3" aria-label="Percentage discount">
+                                %
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                        <Input
+                            value={discountInput}
+                            onChange={(e) => setDiscountInput(e.target.value)}
+                            inputMode="decimal"
+                            placeholder="Discount"
+                            className="flex-1"
+                        />
+                    </div>
+
+                    <dl className="mt-3 space-y-1 text-sm">
+                        <div className="flex justify-between">
+                            <dt className="text-muted-foreground">Subtotal</dt>
+                            <dd className="tabular-nums">{formatPeso(subtotal)}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-muted-foreground">Discount</dt>
+                            <dd className="tabular-nums">−{formatPeso(discountValue)}</dd>
+                        </div>
+                        <div className="flex justify-between text-base font-semibold">
+                            <dt>Total</dt>
+                            <dd className="tabular-nums">{formatPeso(total)}</dd>
+                        </div>
+                    </dl>
+
+                    <Separator className="my-3" />
+
+                    {/* Payment */}
+                    <div className="space-y-2">
+                        <Label>Payment</Label>
+                        <ToggleGroup
+                            type="single"
+                            variant="outline"
+                            value={paymentType}
+                            onValueChange={(value) => value && setPaymentType(value as PaymentType)}
+                            className="justify-start"
+                        >
+                            {(Object.keys(PAYMENT_LABELS) as PaymentType[]).map((type) => (
+                                <ToggleGroupItem key={type} value={type} className="flex-1">
+                                    {PAYMENT_LABELS[type]}
+                                </ToggleGroupItem>
+                            ))}
+                        </ToggleGroup>
+                    </div>
+
+                    {paymentType === 'cash' && (
+                        <div className="mt-3 space-y-2">
+                            <Label htmlFor="cash-received">Cash received</Label>
+                            <Input
+                                id="cash-received"
+                                value={cashReceived}
+                                onChange={(e) => setCashReceived(e.target.value)}
+                                inputMode="decimal"
+                                placeholder="0.00"
+                                className="tabular-nums"
+                            />
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Change</span>
+                                <span className={cn('tabular-nums', insufficientCash && 'text-destructive')}>{formatPeso(Math.max(change, 0))}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <Button className="mt-4 w-full" size="lg" onClick={checkout} disabled={cart.length === 0 || processing || insufficientCash}>
+                        {processing ? 'Processing…' : `Checkout · ${formatPeso(total)}`}
+                    </Button>
+                </Card>
             </div>
         </AppLayout>
     );

@@ -40,7 +40,7 @@ These rules span the entire codebase and are the reason the architecture looks t
 - Returns restore stock (new positive ledger entry); **defects do not** restore stock.
 
 **Identity & keys**
-- Every table uses a **UUID primary key**. Transaction numbers are a separate human-readable value (`YYYYMMDD-000001`, sequence resets daily; receipt number equals transaction number).
+- Every table uses a **UUID primary key**. Transaction numbers are a separate human-readable value (`YYYYMMDD-HHMMSS-000001` — date, wall-clock time, and a zero-padded sequence that resets daily; receipt number equals transaction number).
 - Uniqueness: username unique; **Item name unique** (case-insensitive, spanning archived items); SKU unique; barcode unique *when provided* (blank barcode is allowed and must not block selling). **Variant names are not unique** — different items may reuse "Small"/"Large".
 - Every Item must have **at least one Variant**. Stock, price, SKU, and barcode live on the Variant, not the Item. A single-product item keeps exactly one **unnamed** variant (`name` is null) — the "no variant" case; UI and reports fall back to the item name.
 

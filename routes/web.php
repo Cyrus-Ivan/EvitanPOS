@@ -9,6 +9,7 @@ use App\Http\Controllers\Inventory\ItemController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -21,7 +22,10 @@ Route::middleware(['auth'])->group(function () {
     // Cashier-level: available to every authenticated user. Each destination is
     // a placeholder until its owning phase lands (see ROADMAP.md).
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
-    Route::inertia('pos', 'pos')->name('pos');                                          // Phase 8
+    // Point of Sale (Phase 8). Cashier-level — every authenticated user may sell.
+    Route::get('pos', [PosController::class, 'index'])->name('pos');
+    Route::get('pos/lookup', [PosController::class, 'lookup'])->name('pos.lookup');
+    Route::post('pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
     Route::inertia('sales', 'sales')->name('sales');                                    // Phase 9
     Route::get('login-history', [LoginHistoryController::class, 'index'])->name('login-history');  // Phase 14
 
