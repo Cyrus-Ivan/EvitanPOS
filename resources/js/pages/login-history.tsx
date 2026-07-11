@@ -72,7 +72,7 @@ export default function LoginHistory({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Login History" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                     {canViewAll && (
                         <Select value={filters.user ?? ALL} onValueChange={(value) => applyFilters({ user: value })}>

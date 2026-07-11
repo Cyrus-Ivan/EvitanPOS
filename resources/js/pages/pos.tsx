@@ -10,7 +10,7 @@ export default function Pos() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Point of Sale" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <EmptyState icon={ShoppingCart} title="Point of Sale" description="The checkout screen where cashiers ring up sales. Arrives in Phase 8." />
             </div>
         </AppLayout>

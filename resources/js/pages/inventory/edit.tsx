@@ -12,7 +12,7 @@ export default function EditItem({ item, categories }: { item: Item; categories:
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Edit ${item.name}`} />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <ItemForm item={item} categories={categories} />
             </div>
         </AppLayout>

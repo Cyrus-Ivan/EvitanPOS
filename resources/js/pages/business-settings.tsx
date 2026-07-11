@@ -37,7 +37,7 @@ export default function BusinessSettings({ settings }: { settings: BusinessSetti
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Business Settings" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <HeadingSmall title="Business Settings" description="Business identity used on receipts and reports." />
 
                 <form onSubmit={submit} className="max-w-xl space-y-6">

@@ -10,7 +10,7 @@ export default function Reports() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <EmptyState icon={ChartColumn} title="Reports" description="Daily and monthly sales reporting. Arrives in Phase 12." />
             </div>
         </AppLayout>

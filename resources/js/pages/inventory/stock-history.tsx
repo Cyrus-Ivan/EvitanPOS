@@ -90,7 +90,7 @@ export default function StockHistory({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Stock History" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <Select value={filters.variant ?? ALL} onValueChange={(value) => applyFilters({ variant: value })}>
                         <SelectTrigger className="w-64">

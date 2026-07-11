@@ -65,7 +65,7 @@ export default function Categories({ categories, filters }: { categories: Catego
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Categories" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <Select value={filters.status} onValueChange={changeStatus}>
                         <SelectTrigger className="w-36">

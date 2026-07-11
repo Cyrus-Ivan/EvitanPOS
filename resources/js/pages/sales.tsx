@@ -10,7 +10,7 @@ export default function Sales() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Sales" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <EmptyState icon={ReceiptText} title="Sales" description="Completed transactions, returns, and defects. Arrives in Phase 9." />
             </div>
         </AppLayout>

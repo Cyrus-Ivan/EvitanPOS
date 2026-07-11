@@ -47,7 +47,7 @@ export default function Backup({ backups }: { backups: Backup[] }) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Database Backup" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <h1 className="text-lg font-semibold">Database Backup</h1>

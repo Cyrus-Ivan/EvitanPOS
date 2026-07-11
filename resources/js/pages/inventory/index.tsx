@@ -106,7 +106,7 @@ export default function InventoryIndex({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Inventory" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, SKU, barcode" className="w-64" />
@@ -198,10 +198,19 @@ export default function InventoryIndex({
                                     const variants = item.variants ?? [];
                                     const isExpanded = expandedId === item.id;
                                     const hasVariants = variants.length > 0;
+                                    // Tint the whole item row when any of its variants is at or below its
+                                    // low-stock threshold, so low stock is visible without expanding.
+                                    const hasLowStock = variants.some((v) => (v.current_stock ?? 0) <= v.low_stock_threshold);
 
                                     return (
                                         <Fragment key={item.id}>
-                                            <TableRow>
+                                            <TableRow
+                                                className={
+                                                    hasLowStock && !item.archived_at
+                                                        ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/60'
+                                                        : undefined
+                                                }
+                                            >
                                                 <TableCell className="w-10">
                                                     {hasVariants && (
                                                         <Button
@@ -269,7 +278,14 @@ export default function InventoryIndex({
                                                                         const stock = variant.current_stock ?? 0;
                                                                         const isLow = stock <= variant.low_stock_threshold;
                                                                         return (
-                                                                            <TableRow key={variant.id} className="hover:bg-transparent">
+                                                                            <TableRow
+                                                                                key={variant.id}
+                                                                                className={
+                                                                                    isLow
+                                                                                        ? 'bg-red-50 hover:bg-red-50 dark:bg-red-950/40 dark:hover:bg-red-950/40'
+                                                                                        : 'hover:bg-transparent'
+                                                                                }
+                                                                            >
                                                                                 <TableCell className="pr-8 font-medium">{variant.name || item.name}</TableCell>
                                                                                 <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
                                                                                 <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
