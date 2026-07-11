@@ -1,10 +1,10 @@
 # BRAINSTORM.md
 
-# Etivan POS MVP
+# Evitan POS MVP
 
 ## Overview
 
-Etivan POS is an **offline-first Retail Point of Sale (POS)** application built using:
+Evitan POS is an **offline-first Retail Point of Sale (POS)** application built using:
 
 * Laravel
 * NativePHP

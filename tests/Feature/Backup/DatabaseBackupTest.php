@@ -21,7 +21,7 @@ class DatabaseBackupTest extends TestCase
     {
         parent::setUp();
 
-        $this->workDir = sys_get_temp_dir().'/etivan-backup-feat-'.uniqid();
+        $this->workDir = sys_get_temp_dir().'/evitan-backup-feat-'.uniqid();
         $this->backupDir = $this->workDir.'/backups';
         $this->dbPath = $this->workDir.'/nativephp.sqlite';
 

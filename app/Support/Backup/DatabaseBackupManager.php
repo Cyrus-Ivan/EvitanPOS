@@ -7,7 +7,7 @@ use RuntimeException;
 /**
  * Backup and restore of the single SQLite database file (Phase 16, Owner-only).
  *
- * Etivan POS is an offline, single-user desktop app whose SQLite connection uses
+ * Evitan POS is an offline, single-user desktop app whose SQLite connection uses
  * the default rollback journal (see config/database.php), so a plain file copy
  * taken from an idle menu action is a consistent snapshot. Before any restore we
  * first snapshot the current live file, so a restore can itself be undone.

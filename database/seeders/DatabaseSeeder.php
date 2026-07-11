@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * Etivan POS requires exactly one Owner. This is a temporary dev seed so the
+     * Evitan POS requires exactly one Owner. This is a temporary dev seed so the
      * app is usable immediately; proper first-run Owner provisioning is
      * formalized in Phase 2 (Authentication).
      */
@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
 
         // Business-identity defaults (Phase 4) so the first run isn't blank.
         $businessDefaults = [
-            'business_name' => 'Etivan POS',
+            'business_name' => 'Evitan POS',
             'business_address' => '',
             'tin' => '',
             'receipt_footer' => '',

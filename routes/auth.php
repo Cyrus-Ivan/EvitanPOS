@@ -4,7 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use Illuminate\Support\Facades\Route;
 
-// Etivan POS auth is intentionally minimal: username + password only. There is
+// Evitan POS auth is intentionally minimal: username + password only. There is
 // no self-registration, no email verification, and no email-based password
 // reset (accounts are provisioned by the Owner/Admin — see Phase 13). Password
 // changes happen from Settings; Owner/Admin reset a user's password directly.

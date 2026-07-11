@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-# Etivan POS MVP Development Roadmap
+# Evitan POS MVP Development Roadmap
 
 This roadmap prioritizes building a **working application as early as possible**, while minimizing refactoring. Each phase should produce a usable milestone before moving to the next.
 

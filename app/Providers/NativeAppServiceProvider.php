@@ -14,7 +14,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
     public function boot(): void
     {
         Window::open()
-            ->title('Etivan POS')
+            ->title('Evitan POS')
             ->width(1280)
             ->height(800)
             ->minWidth(1024)

@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository is **pre-scaffold**. It currently contains only planning documents — `BRAINSTORM.md` (full functional spec) and `ROADMAP.md` (phased build plan). No Laravel/React application has been generated yet, so there are no build, lint, or test commands to run. The first task (Roadmap Phase 0) is to scaffold the app.
 
-Note: the directory is `EvitanPOS`; the product is named **Etivan POS** in the specs. Use "Etivan POS" for user-facing names unless told otherwise.
+Note: the product is named **Evitan POS**. Use "Evitan POS" for user-facing names unless told otherwise.
 
 ## What this is
 
-Etivan POS is an **offline-first retail Point of Sale** desktop app for a **single business installation**. No server, no cloud, no network dependency. Multi-branch and cloud sync are explicitly out of scope for the MVP but the schema should stay sync-compatible (hence UUIDs everywhere).
+Evitan POS is an **offline-first retail Point of Sale** desktop app for a **single business installation**. No server, no cloud, no network dependency. Multi-branch and cloud sync are explicitly out of scope for the MVP but the schema should stay sync-compatible (hence UUIDs everywhere).
 
 ## Intended stack
 
