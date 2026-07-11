@@ -20,6 +20,17 @@ use Illuminate\Validation\Rule;
 class CheckoutRequest extends FormRequest
 {
     /**
+     * Normalize the optional comment before validation: trim it and collapse an
+     * empty/whitespace-only value to null so a blank input never stores "".
+     */
+    protected function prepareForValidation(): void
+    {
+        $comment = trim((string) $this->input('comment', ''));
+
+        $this->merge(['comment' => $comment === '' ? null : $comment]);
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -54,6 +65,10 @@ class CheckoutRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+
+            // Optional free-text note captured at sale time; normalized to null
+            // when blank in prepareForValidation().
+            'comment' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

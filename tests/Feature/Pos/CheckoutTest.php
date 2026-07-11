@@ -240,6 +240,52 @@ class CheckoutTest extends TestCase
         $this->assertNull($transaction->change);
     }
 
+    public function test_a_comment_is_stored_on_the_transaction()
+    {
+        $variant = $this->sellable(price: 100, cost: 40, stock: 5);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
+                'payment_type' => 'online',
+                'comment' => '  Held for pickup  ',
+            ])
+            ->assertSessionHasNoErrors();
+
+        // Stored trimmed.
+        $this->assertSame('Held for pickup', Transaction::sole()->comment);
+    }
+
+    public function test_a_blank_comment_is_stored_as_null()
+    {
+        $variant = $this->sellable(price: 100, cost: 40, stock: 5);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
+                'payment_type' => 'online',
+                'comment' => '   ',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(Transaction::sole()->comment);
+    }
+
+    public function test_an_overlong_comment_is_rejected()
+    {
+        $variant = $this->sellable(price: 100, cost: 40, stock: 5);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
+                'payment_type' => 'online',
+                'comment' => str_repeat('a', 501),
+            ])
+            ->assertSessionHasErrors('comment');
+
+        $this->assertSame(0, Transaction::count());
+    }
+
     public function test_duplicate_lines_for_one_variant_are_merged()
     {
         $variant = $this->sellable(price: 100, cost: 40, stock: 10);

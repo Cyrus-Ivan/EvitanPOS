@@ -21,6 +21,7 @@ class Transaction extends Model
         'total',
         'cash_received',
         'change',
+        'comment',
         'user_id',
     ];
 

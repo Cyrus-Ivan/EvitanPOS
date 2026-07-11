@@ -242,6 +242,7 @@ class PosController extends Controller
             'total' => $this->pesos($total),
             'cash_received' => $cashReceived !== null ? $this->pesos($cashReceived) : null,
             'change' => $change !== null ? $this->pesos($change) : null,
+            'comment' => $data['comment'] ?? null,
             'user_id' => $request->user()->getKey(),
         ]);
 

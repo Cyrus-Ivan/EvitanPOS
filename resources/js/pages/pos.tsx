@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AppLayout from '@/layouts/app-layout';
 import { formatPeso } from '@/lib/money';
@@ -35,6 +36,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
     const [discountInput, setDiscountInput] = useState('');
     const [paymentType, setPaymentType] = useState<PaymentType>('cash');
     const [cashReceived, setCashReceived] = useState('');
+    const [comment, setComment] = useState('');
     const [processing, setProcessing] = useState(false);
 
     const addToCart = (product: PosProduct) => {
@@ -120,6 +122,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                 discount: discountNum > 0 ? discountNum : 0,
                 discount_type: discountNum > 0 ? discountType : null,
                 cash_received: paymentType === 'cash' ? cashNum : null,
+                comment: comment.trim() || null,
             },
             {
                 preserveScroll: true,
@@ -129,6 +132,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                     setCart([]);
                     setDiscountInput('');
                     setCashReceived('');
+                    setComment('');
                 },
                 // Show the first error regardless of its key — per-line failures
                 // are keyed lines.0.variant_id etc., not a flat `lines`.
@@ -348,6 +352,19 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                             </div>
                         </div>
                     )}
+
+                    <div className="mt-3 space-y-2">
+                        <Label htmlFor="sale-comment">Comment (optional)</Label>
+                        <Textarea
+                            id="sale-comment"
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            rows={2}
+                            maxLength={500}
+                            placeholder="Add a note to this sale"
+                            className="resize-none"
+                        />
+                    </div>
 
                     <Button className="mt-4 w-full" size="lg" onClick={checkout} disabled={cart.length === 0 || processing || insufficientCash}>
                         {processing ? 'Processing…' : `Checkout · ${formatPeso(total)}`}
