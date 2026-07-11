@@ -16,7 +16,7 @@ const COLUMNS: ColumnDoc[] = [
         required: false,
         type: 'text',
         description:
-            'Groups the product. Created automatically if it doesn’t exist yet (archived categories must be restored first). For an existing product it must match the current category — blank keeps it; the import never moves products between categories.',
+            'Groups the product. Created automatically if it doesn’t exist yet (archived categories must be restored first). On an existing product a different (active) category moves it — blank keeps the current one. Category is the one item-level field an update can change.',
     },
     {
         name: 'product',
@@ -30,7 +30,7 @@ const COLUMNS: ColumnDoc[] = [
         required: false,
         type: 'text',
         description:
-            'The specific version — size, flavor, color (e.g. 500ml). Blank on a new product means a single “no variant” product; blank on an existing SKU keeps its current name. If any of a product’s rows is named, every row for that product must be named.',
+            'The specific version — size, flavor, color (e.g. 500ml). Blank on a new product means a single “no variant” product. Fixed after creation: on an existing SKU leave it blank (or repeat the current name) — a different value is rejected. If any of a product’s rows is named, every row for that product must be named.',
     },
     {
         name: 'sku',
@@ -44,7 +44,7 @@ const COLUMNS: ColumnDoc[] = [
         required: false,
         type: 'text',
         description:
-            'Scannable code. Unique when provided — a blank barcode is fine and never blocks a sale. Blank keeps an existing variant’s barcode.',
+            'Scannable code, set when the variant is created. Unique when provided — a blank barcode is fine and never blocks a sale. Fixed after creation: on an existing SKU leave it blank (or repeat the current value) — a different barcode is rejected.',
     },
     {
         name: 'selling_price',
@@ -64,13 +64,13 @@ const COLUMNS: ColumnDoc[] = [
         name: 'unit',
         required: false,
         type: 'text',
-        description: 'Unit of measure — pc, kg, box. Defaults to “pc” for new products; blank keeps an existing product’s unit.',
+        description: 'Unit of measure — pc, kg, box. Set when the product is created (defaults to “pc”). Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different unit is rejected.',
     },
     {
         name: 'description',
         required: false,
         type: 'text',
-        description: 'Free-text notes about the product. Blank keeps an existing product’s description.',
+        description: 'Free-text notes, set when the product is created. Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different description is rejected.',
     },
     {
         name: 'low_stock_threshold',
@@ -130,8 +130,8 @@ const REJECTION_REASONS = [
     'A stock change would push a variant below zero (usually add_to_current_stock subtracting too much).',
     'A row’s SKU or product name matches something you’ve archived — restore it in Inventory first.',
     'A row’s product cell doesn’t match the product its SKU belongs to — the import can’t rename products.',
-    'A row’s category cell doesn’t match the product’s current category — the import can’t move products between categories.',
-    'A row files a brand-new product under an archived category — restore the category in Inventory first.',
+    'An existing SKU’s row tries to change its barcode, variant name, unit, or description — those are fixed after creation. Leave the cell blank or repeat the current value.',
+    'A row moves a product into an archived category — restore the category in Inventory first.',
     'Rows describing the same product disagree on its category, unit, or description — make them match, or leave all but one blank.',
     'The same brand-new product name is repeated with no variant name (duplicate rows) — name each row differently, or remove the duplicate.',
     'A product mixes a blank (no-variant) row with named ones — name every row for that product, or remove the blank.',
@@ -181,22 +181,23 @@ export default function ImportGuideDialog() {
                             The <Mono>sku</Mono> is the key. If a row’s SKU already exists, that variant is <strong>updated</strong> and its stock
                             adjusted. If the SKU is new, the category, product and variant are <strong>created</strong> for you.
                         </Callout>
-                        <Callout title="What import won’t change" tone="warn">
-                            Because the SKU is the identity, some edits <strong>don’t travel through the import</strong> — and a cell that tries is a{' '}
-                            <strong>row error</strong>, never silently ignored:
+                        <Callout title="What an update can change" tone="warn">
+                            For an <strong>existing SKU</strong>, an update only touches <Mono>selling_price</Mono>, <Mono>cost</Mono>,{' '}
+                            <Mono>stock</Mono>, <Mono>low_stock_threshold</Mono> and <Mono>category</Mono>. Everything else is fixed after creation —
+                            and a cell that tries to change it is a <strong>row error</strong>, never silently ignored:
                             <ul className="mt-1.5 list-disc space-y-1 pl-5">
                                 <li>
-                                    For an <strong>existing SKU</strong>, the <Mono>product</Mono> name and <Mono>category</Mono> must match what’s
-                                    recorded (or be left blank). Product names can’t be changed at all, and category changes happen in{' '}
-                                    <strong>Inventory</strong>, not here.
+                                    The <Mono>product</Mono> name, <Mono>variant</Mono> name, <Mono>barcode</Mono>, <Mono>unit</Mono> and{' '}
+                                    <Mono>description</Mono> can’t be changed by import. Leave the cell blank, or repeat the current value — edit these
+                                    in <strong>Inventory</strong>.
+                                </li>
+                                <li>
+                                    <Mono>category</Mono> is the exception: a different (active) category <strong>moves</strong> the product; blank keeps
+                                    the current one.
                                 </li>
                                 <li>
                                     You <strong>can’t rename a SKU</strong> here. Change a SKU and it reads as a brand-new variant, leaving the old one
                                     untouched.
-                                </li>
-                                <li>
-                                    A <strong>new SKU whose product name already exists</strong> adds a variant to that product — its{' '}
-                                    <Mono>category</Mono> cell must match that product’s category (or be blank).
                                 </li>
                             </ul>
                         </Callout>

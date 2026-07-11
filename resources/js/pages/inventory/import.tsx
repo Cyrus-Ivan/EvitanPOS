@@ -74,7 +74,7 @@ export default function InventoryImport({ history }: { history: Paginated<Import
             await confirm({
                 title: 'Import this CSV?',
                 description:
-                    'New categories, products and variants will be created and matching ones (by SKU) updated, then stock is adjusted per each row’s mode. If any row is invalid the entire import is rejected and nothing is saved.',
+                    'New categories, products and variants will be created. For a row matching an existing SKU, only price, cost, stock, low-stock threshold and category are updated — name, barcode, unit and description are fixed after creation. If any row is invalid the entire import is rejected and nothing is saved.',
                 confirmLabel: 'Import',
             })
         ) {

@@ -149,7 +149,7 @@ class InventoryImportTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'sku' => 'SKU-1', 'selling_price' => '25.00', 'low_stock_threshold' => '8', 'stock' => '20']),
+                $this->row(['category' => '', 'sku' => 'SKU-1', 'variant' => '', 'unit' => '', 'description' => '', 'selling_price' => '25.00', 'low_stock_threshold' => '8', 'stock' => '20']),
             ])])
             ->assertSessionHasNoErrors();
 
@@ -176,7 +176,7 @@ class InventoryImportTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'sku' => 'SKU-1', 'stock' => '5', 'mode' => 'add_to_current_stock']),
+                $this->row(['category' => '', 'sku' => 'SKU-1', 'variant' => '', 'unit' => '', 'description' => '', 'stock' => '5', 'mode' => 'add_to_current_stock']),
             ])])
             ->assertSessionHasNoErrors();
 
@@ -341,7 +341,7 @@ class InventoryImportTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'WATER-500']),
+                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'WATER-500', 'unit' => '', 'description' => '']),
             ])]);
 
         // The named variant would leave the item mixing an unnamed + named row.
@@ -351,25 +351,25 @@ class InventoryImportTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('already exists as a single', json_encode($import->errors));
     }
 
-    public function test_import_can_convert_a_no_variant_item_by_naming_the_existing_and_adding()
+    public function test_import_cannot_convert_a_no_variant_item_by_naming_its_existing_variant()
     {
         $owner = User::factory()->owner()->create();
         $item = Item::factory()->create(['name' => 'Bottled Water']);
         $existing = Variant::factory()->for($item)->create(['name' => null, 'sku' => 'WATER-1']);
 
-        // Naming the existing variant (by its SKU) and adding a second one in the
-        // same file is the supported CSV conversion path.
+        // Naming the existing (unnamed) variant is a rename, which the import no
+        // longer allows — the conversion is done in Inventory, not the CSV.
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '330ml', 'sku' => 'WATER-1', 'stock' => '0', 'mode' => 'add_to_current_stock']),
-                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'WATER-500', 'stock' => '0', 'mode' => 'add_to_current_stock']),
-            ])])
-            ->assertSessionHasNoErrors();
+                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '330ml', 'sku' => 'WATER-1', 'unit' => '', 'description' => '', 'stock' => '0', 'mode' => 'add_to_current_stock']),
+                $this->row(['category' => '', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'WATER-500', 'unit' => '', 'description' => '', 'stock' => '0', 'mode' => 'add_to_current_stock']),
+            ])]);
 
-        $this->assertSame('success', ImportHistory::first()->status);
-        $this->assertSame('330ml', $existing->fresh()->name);
-        $this->assertSame('500ml', Variant::where('sku', 'WATER-500')->first()->name);
-        $this->assertSame(2, $item->variants()->active()->count());
+        $import = ImportHistory::first();
+        $this->assertSame('failed', $import->status);
+        $this->assertStringContainsStringIgnoringCase('variant name', json_encode($import->errors));
+        $this->assertNull($existing->fresh()->name); // still unnamed
+        $this->assertNull(Variant::where('sku', 'WATER-500')->first()); // nothing applied
     }
 
     public function test_import_rejects_a_file_mixing_blank_and_named_variants_for_one_product()
@@ -460,7 +460,7 @@ class InventoryImportTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'sku' => 'water-500', 'selling_price' => '42.00']),
+                $this->row(['category' => '', 'sku' => 'water-500', 'variant' => '', 'unit' => '', 'description' => '', 'selling_price' => '42.00']),
             ])])
             ->assertSessionHasNoErrors();
 
@@ -575,8 +575,8 @@ class InventoryImportTest extends TestCase
         // unnamed row, so adding a named sibling is legal.
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => '', 'sku' => 'WATER-1', 'variant' => '', 'stock' => '0', 'mode' => 'add_to_current_stock']),
-                $this->row(['category' => '', 'sku' => 'WATER-500', 'variant' => '500ml', 'stock' => '0', 'mode' => 'add_to_current_stock']),
+                $this->row(['category' => '', 'sku' => 'WATER-1', 'variant' => '', 'unit' => '', 'description' => '', 'stock' => '0', 'mode' => 'add_to_current_stock']),
+                $this->row(['category' => '', 'sku' => 'WATER-500', 'variant' => '500ml', 'unit' => '', 'description' => '', 'stock' => '0', 'mode' => 'add_to_current_stock']),
             ])])
             ->assertSessionHasNoErrors();
 
@@ -585,7 +585,7 @@ class InventoryImportTest extends TestCase
         $this->assertSame(2, $item->variants()->active()->count());
     }
 
-    public function test_new_variant_row_updates_the_existing_items_unit_and_description()
+    public function test_new_variant_row_cannot_change_the_existing_items_unit_or_description()
     {
         $owner = User::factory()->owner()->create();
         $item = Item::factory()->create([
@@ -595,9 +595,9 @@ class InventoryImportTest extends TestCase
         ]);
         Variant::factory()->for($item)->create(['sku' => 'WATER-500', 'name' => '500ml']);
 
-        // The row attaches a NEW variant to an existing item; its non-blank
-        // unit/description cells must update the item exactly as a
-        // matched-by-SKU row would.
+        // The row attaches a NEW variant to an existing item, but unit and
+        // description are item-level and fixed after creation — a differing
+        // cell is rejected, not silently applied.
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
                 $this->row([
@@ -607,12 +607,15 @@ class InventoryImportTest extends TestCase
                     'unit' => 'box',
                     'description' => 'Bulk drinking water',
                 ]),
-            ])])
-            ->assertSessionHasNoErrors();
+            ])]);
 
+        $import = ImportHistory::first();
+        $this->assertSame('failed', $import->status);
+        $this->assertStringContainsStringIgnoringCase('unit', json_encode($import->errors));
         $item->refresh();
-        $this->assertSame('box', $item->unit);
-        $this->assertSame('Bulk drinking water', $item->description);
+        $this->assertSame('pc', $item->unit); // unchanged
+        $this->assertSame('Original description', $item->description); // unchanged
+        $this->assertSame(1, $item->variants()->count()); // no new variant created
     }
 
     public function test_later_row_fills_unit_left_blank_by_the_first_row_of_a_new_product()
@@ -652,23 +655,115 @@ class InventoryImportTest extends TestCase
         $this->assertSame('Bottled Water', $item->fresh()->name);
     }
 
-    public function test_import_rejects_a_category_mismatch_for_an_existing_item()
+    public function test_import_rejects_changing_an_existing_variants_barcode()
+    {
+        $owner = User::factory()->owner()->create();
+        $item = Item::factory()->create(['name' => 'Bottled Water']);
+        $variant = Variant::factory()->for($item)->create(['sku' => 'SKU-1', 'name' => '500ml', 'barcode' => '1112223334445']);
+
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row([
+                    'category' => '', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'SKU-1',
+                    'barcode' => '9998887776665', 'unit' => '', 'description' => '',
+                ]),
+            ])]);
+
+        $import = ImportHistory::first();
+        $this->assertSame('failed', $import->status);
+        $this->assertStringContainsStringIgnoringCase('barcode', json_encode($import->errors));
+        $this->assertSame('1112223334445', $variant->fresh()->barcode); // unchanged
+    }
+
+    public function test_import_rejects_changing_an_existing_variants_name()
+    {
+        $owner = User::factory()->owner()->create();
+        $item = Item::factory()->create(['name' => 'Bottled Water']);
+        $variant = Variant::factory()->for($item)->create(['sku' => 'SKU-1', 'name' => '500ml']);
+
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row([
+                    'category' => '', 'product' => 'Bottled Water', 'variant' => '1L', 'sku' => 'SKU-1',
+                    'barcode' => '', 'unit' => '', 'description' => '',
+                ]),
+            ])]);
+
+        $import = ImportHistory::first();
+        $this->assertSame('failed', $import->status);
+        $this->assertStringContainsStringIgnoringCase('variant name', json_encode($import->errors));
+        $this->assertSame('500ml', $variant->fresh()->name); // unchanged
+    }
+
+    public function test_import_updates_only_the_allowed_fields_on_a_matched_variant()
+    {
+        $owner = User::factory()->owner()->create();
+        $category = Category::factory()->create(['name' => 'Beverages']);
+        $item = Item::factory()->create([
+            'name' => 'Bottled Water', 'category_id' => $category->id, 'unit' => 'pc', 'description' => 'Purified water',
+        ]);
+        $variant = Variant::factory()->for($item)->create([
+            'sku' => 'WATER-500', 'name' => '500ml', 'barcode' => '4801234567890',
+            'selling_price' => '15.00', 'cost' => '9.50', 'low_stock_threshold' => 12,
+        ]);
+
+        // A row that repeats every immutable cell (as an export would) but bumps
+        // price, cost, threshold and stock: succeeds, and only those change.
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row([
+                    'category' => 'Beverages', 'product' => 'Bottled Water', 'variant' => '500ml', 'sku' => 'WATER-500',
+                    'barcode' => '4801234567890', 'selling_price' => '25.00', 'cost' => '11.00', 'stock' => '40',
+                    'unit' => 'pc', 'description' => 'Purified water', 'low_stock_threshold' => '5', 'mode' => 'replace_stock_count',
+                ]),
+            ])])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('success', ImportHistory::first()->status);
+        $variant->refresh();
+        $this->assertSame('25.00', $variant->selling_price);
+        $this->assertSame('11.00', $variant->cost);
+        $this->assertSame(5, $variant->low_stock_threshold);
+        $this->assertSame(40, $this->stockOf($variant));
+        $this->assertSame('500ml', $variant->name); // immutable, untouched
+        $this->assertSame('4801234567890', $variant->barcode); // immutable, untouched
+    }
+
+    public function test_import_moves_an_existing_item_to_the_rows_category()
     {
         $owner = User::factory()->owner()->create();
         $item = Item::factory()->create(['name' => 'Bottled Water', 'category_id' => null]);
         Variant::factory()->for($item)->create(['sku' => 'SKU-1']);
 
+        // Category is the one item-level field an update may change: a non-blank
+        // cell files/moves the product into that (newly created) category.
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['category' => 'New Cat', 'sku' => 'SKU-1']),
+                $this->row(['category' => 'New Cat', 'sku' => 'SKU-1', 'variant' => '', 'unit' => '', 'description' => '']),
+            ])])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('success', ImportHistory::first()->status);
+        $this->assertDatabaseHas('categories', ['name' => 'New Cat']);
+        $this->assertSame('New Cat', $item->fresh()->category->name);
+    }
+
+    public function test_import_rejects_moving_an_item_into_an_archived_category()
+    {
+        $owner = User::factory()->owner()->create();
+        Category::factory()->create(['name' => 'Old Stock', 'archived_at' => now()]);
+        $item = Item::factory()->create(['name' => 'Bottled Water', 'category_id' => null]);
+        Variant::factory()->for($item)->create(['sku' => 'SKU-1']);
+
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([
+                $this->row(['category' => 'Old Stock', 'sku' => 'SKU-1', 'variant' => '', 'unit' => '', 'description' => '']),
             ])]);
 
         $import = ImportHistory::first();
         $this->assertSame('failed', $import->status);
-        $this->assertStringContainsStringIgnoringCase('move products between categories', json_encode($import->errors));
-        // The rejected row must not leave an orphan category behind.
-        $this->assertDatabaseMissing('categories', ['name' => 'New Cat']);
-        $this->assertNull($item->fresh()->category_id);
+        $this->assertStringContainsStringIgnoringCase('archived', json_encode($import->errors));
+        $this->assertNull($item->fresh()->category_id); // not moved
     }
 
     public function test_import_rejects_a_row_naming_an_archived_category()
@@ -775,7 +870,7 @@ class InventoryImportTest extends TestCase
         // create a duplicate.
         $this->actingAs($owner)
             ->post(route('inventory.import.store'), ['file' => $this->csv([
-                $this->row(['product' => 'cafÉ latte', 'category' => '', 'sku' => 'CAFE-1', 'variant' => 'Small']),
+                $this->row(['product' => 'cafÉ latte', 'category' => '', 'sku' => 'CAFE-1', 'variant' => 'Small', 'unit' => '', 'description' => '']),
             ])])
             ->assertSessionHasNoErrors();
 

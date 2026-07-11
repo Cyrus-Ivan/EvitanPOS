@@ -485,7 +485,16 @@ class CsvInventoryImporter
                     continue;
                 }
 
-                if ($existing->item !== null && ($message = $this->categoryMismatchMessage($row, $existing->item)) !== null) {
+                // SKU, barcode, variant name and the item's unit/description are
+                // fixed once the variant exists — an update may only touch
+                // price, cost, stock, threshold and category.
+                if ($existing->item !== null && ($message = $this->immutableFieldErrors($row, $existing, $existing->item)) !== null) {
+                    $errors[] = ['row' => $row['line'], 'messages' => [$message]];
+
+                    continue;
+                }
+
+                if (($message = $this->categoryTargetError($row, $existing->item, $categoriesByName)) !== null) {
                     $errors[] = ['row' => $row['line'], 'messages' => [$message]];
 
                     continue;
@@ -512,23 +521,20 @@ class CsvInventoryImporter
                 continue;
             }
 
-            if ($item !== null && ($message = $this->categoryMismatchMessage($row, $item)) !== null) {
+            // Attaching a new variant to an existing item may not change that
+            // item's (shared) unit or description.
+            if ($item !== null && ($message = $this->immutableFieldErrors($row, null, $item)) !== null) {
                 $errors[] = ['row' => $row['line'], 'messages' => [$message]];
 
                 continue;
             }
 
-            // Brand-new item: it must not be filed under an archived category.
-            if ($item === null && $row['category'] !== null) {
-                $categoryMatch = $categoriesByName->get(self::nameKey($row['category']));
+            // A non-blank category files a new item, or moves an existing one,
+            // into that category — the target must be active.
+            if (($message = $this->categoryTargetError($row, $item, $categoriesByName)) !== null) {
+                $errors[] = ['row' => $row['line'], 'messages' => [$message]];
 
-                if ($categoryMatch !== null && $categoryMatch->archived_at !== null) {
-                    $errors[] = ['row' => $row['line'], 'messages' => [
-                        'Category "'.$categoryMatch->name.'" is archived. Restore it from Inventory before importing.',
-                    ]];
-
-                    continue;
-                }
+                continue;
             }
 
             $key = $item !== null ? 'item:'.$item->getKey() : 'new:'.self::nameKey($row['product']);
@@ -604,27 +610,69 @@ class CsvInventoryImporter
     }
 
     /**
-     * Import cannot rename or re-file existing products: a non-blank category
-     * cell must match the item's current category (case-insensitively). Returns
-     * the row error message, or null when the row is consistent.
+     * Import updates are limited to price, cost, stock, threshold and category.
+     * SKU, barcode, every name, and the item's unit/description are fixed once
+     * the variant/item exists: a non-blank cell that disagrees with the stored
+     * value is a mistake (a blank cell, or one equal to the current value, is
+     * fine — so an unedited export re-imports cleanly). Returns the first
+     * offending field's message, or null. $existing is null when a brand-new
+     * variant merely attaches to an existing $item (only the item-level unit
+     * and description are then fixed).
      *
      * @param  array<string, mixed>  $row
      */
-    private function categoryMismatchMessage(array $row, Item $item): ?string
+    private function immutableFieldErrors(array $row, ?Variant $existing, Item $item): ?string
+    {
+        $checks = [];
+
+        if ($existing !== null) {
+            $checks[] = ['field' => 'barcode', 'cell' => $row['barcode'], 'stored' => $existing->barcode];
+            $checks[] = ['field' => 'variant name', 'cell' => $row['variant'], 'stored' => $existing->name];
+        }
+
+        $checks[] = ['field' => 'unit', 'cell' => $row['unit'], 'stored' => $item->unit];
+        $checks[] = ['field' => 'description', 'cell' => $row['description'], 'stored' => $item->description];
+
+        foreach ($checks as $check) {
+            if ($check['cell'] !== null && $check['cell'] !== $check['stored']) {
+                return 'This row would change the '.$check['field'].' of existing product "'.$item->name
+                    .'", which the import can\'t do. Leave that cell blank or set it to the current value, '
+                    .'then change it in Inventory instead.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A non-blank category cell files a new item, or moves an existing one, into
+     * that category. Blank keeps the current category, and a value naming the
+     * item's current category is a no-op (allowed even if that category has
+     * since been archived). Any other target must resolve to an active category.
+     * Returns the row error message, or null.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  Collection<string, Category>  $categoriesByName
+     */
+    private function categoryTargetError(array $row, ?Item $item, Collection $categoriesByName): ?string
     {
         if ($row['category'] === null) {
             return null;
         }
 
-        $current = $item->category?->name;
+        $current = $item?->category?->name;
 
         if ($current !== null && self::nameKey($row['category']) === self::nameKey($current)) {
             return null;
         }
 
-        return 'This row places "'.$item->name.'" in category "'.$row['category'].'", but it is currently '
-            .($current === null ? 'uncategorized' : 'in "'.$current.'"')
-            .'. The import can\'t move products between categories — leave the category cell blank, or change it in Inventory.';
+        $match = $categoriesByName->get(self::nameKey($row['category']));
+
+        if ($match !== null && $match->archived_at !== null) {
+            return 'Category "'.$match->name.'" is archived. Restore it from Inventory before importing.';
+        }
+
+        return null;
     }
 
     /**
@@ -790,7 +838,9 @@ class CsvInventoryImporter
                 return Item::query()
                     ->with('category:id,name')
                     ->whereRaw('name COLLATE NOCASE in ('.$placeholders.')', $chunk)
-                    ->get(['id', 'name', 'archived_at', 'category_id']);
+                    // unit/description are compared by immutableFieldErrors when
+                    // a new variant attaches to an existing item, so load them.
+                    ->get(['id', 'name', 'archived_at', 'category_id', 'unit', 'description']);
             })
             ->keyBy(fn (Item $item) => self::nameKey($item->name));
     }
@@ -844,29 +894,31 @@ class CsvInventoryImporter
                 $variant->name = $row['variant'];
                 $variant->barcode = $row['barcode'];
             } else {
+                // Update path: SKU, barcode, variant name and the item's
+                // unit/description are immutable (validation rejected any
+                // change), so nothing beyond price/cost/stock/threshold and the
+                // category move below is written for a matched variant.
                 $item = $variant->item;
-
-                if ($row['variant'] !== null) {
-                    $variant->name = $row['variant'];
-                }
-
-                if ($row['barcode'] !== null) {
-                    $variant->barcode = $row['barcode'];
-                }
             }
 
-            // Blank cells never wipe data: only non-blank values touch the
-            // item, whether the row matched an existing variant or attached a
-            // new one to it. (Product name and category are validated to
-            // match, so they are never written here.) On an item this file
-            // just created the values are already in place, so this is a no-op.
-            $itemUpdates = array_filter([
-                'unit' => $row['unit'],
-                'description' => $row['description'],
-            ], fn ($value) => $value !== null);
+            // Category is the sole item-level field an update may change. Blank
+            // keeps the current one; on an item this file just created the
+            // target already matches, so this is a no-op there.
+            $this->applyCategoryMove($row, $item, $categoryCache);
 
-            if ($itemUpdates !== []) {
-                $item->update($itemUpdates);
+            // Unit/description are immutable on an existing item (validation
+            // rejects any change), but on an item this import is *creating* a
+            // later row may still fill a value the first row left blank — they
+            // cannot conflict, since conflictingFieldErrors enforces agreement.
+            if ($item->wasRecentlyCreated) {
+                $itemUpdates = array_filter([
+                    'unit' => $row['unit'],
+                    'description' => $row['description'],
+                ], fn ($value) => $value !== null);
+
+                if ($itemUpdates !== []) {
+                    $item->update($itemUpdates);
+                }
             }
 
             $variant->selling_price = $row['selling_price'];
@@ -916,6 +968,28 @@ class CsvInventoryImporter
             );
         } catch (NegativeInventoryException $e) {
             throw new ImportRowException($row['line'], $e->getMessage());
+        }
+    }
+
+    /**
+     * Move an existing item into the row's category when a non-blank cell names
+     * a different one (find-or-create via resolveCategoryId). Blank keeps the
+     * current category; a brand-new item is already filed correctly, so the ids
+     * match and nothing is written. Validation confirmed the target is active.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<string, string>  $categoryCache
+     */
+    private function applyCategoryMove(array $row, Item $item, array &$categoryCache): void
+    {
+        if ($row['category'] === null) {
+            return;
+        }
+
+        $categoryId = $this->resolveCategoryId($row['category'], $categoryCache);
+
+        if ($item->category_id !== $categoryId) {
+            $item->update(['category_id' => $categoryId]);
         }
     }
 
