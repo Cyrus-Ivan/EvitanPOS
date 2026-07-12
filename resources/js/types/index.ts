@@ -182,6 +182,39 @@ export interface TransactionDetail {
     returns: SaleReturnEvent[];
 }
 
+// Reports (Phase 12). Sales are recomputed from source tables as
+// net = gross − returns − defects; cogs/profit are Owner-only (absent otherwise).
+export type ReportPeriod = 'daily' | 'monthly';
+
+// One bucket (a day for daily, a month for monthly). Money fields are "0.00" strings.
+// cogs/profit/uncosted_sales are Owner-only (absent for everyone else). `profit`
+// covers only items with a recorded cost; net sales from items with no cost are
+// reported separately as `uncosted_sales` and excluded from profit.
+export interface ReportRow {
+    // '2026-07-12' for daily, '2026-07' for monthly.
+    bucket: string;
+    transactions: number;
+    gross_sales: string;
+    returns: string;
+    defects: string;
+    net_sales: string;
+    cogs?: string;
+    profit?: string;
+    uncosted_sales?: string;
+}
+
+// Period-wide totals for the summary cards.
+export interface ReportTotals {
+    transactions: number;
+    gross_sales: string;
+    returns: string;
+    defects: string;
+    net_sales: string;
+    cogs?: string;
+    profit?: string;
+    uncosted_sales?: string;
+}
+
 export interface PaginationLink {
     url: string | null;
     label: string;

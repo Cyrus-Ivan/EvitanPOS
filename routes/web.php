@@ -11,6 +11,7 @@ use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PrinterSettingsController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
@@ -54,7 +55,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin-level: Admins and the Owner.
     Route::middleware('role:admin')->group(function () {
-        Route::inertia('reports', 'reports')->name('reports');                          // Phase 12
+        Route::get('reports', [ReportsController::class, 'index'])->name('reports');     // Phase 12
         Route::inertia('audit-logs', 'audit-logs')->name('audit-logs');                // Phase 15
 
         // User management (Phase 13). Which roles an actor may create/assign and
