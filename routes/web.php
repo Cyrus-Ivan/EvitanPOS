@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,7 +27,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('pos', [PosController::class, 'index'])->name('pos');
     Route::get('pos/lookup', [PosController::class, 'lookup'])->name('pos.lookup');
     Route::post('pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
-    Route::inertia('sales', 'sales')->name('sales');                                    // Phase 9
+    // Sales history (Phase 9). Cashier-level: every user may browse all sales
+    // (needed to look up a transaction for reprint/return). Item cost in the
+    // detail view is Owner-only, gated inside the controller.
+    Route::get('sales', [SalesController::class, 'index'])->name('sales');
+    Route::get('sales/{transaction}', [SalesController::class, 'show'])->name('sales.show');
     Route::get('login-history', [LoginHistoryController::class, 'index'])->name('login-history');  // Phase 14
 
     // Inventory (Phase 5). Viewing is Cashier-level (read-only); every write is

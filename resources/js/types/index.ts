@@ -111,6 +111,48 @@ export interface StockLedgerEntry {
     performed_by: string | null;
 }
 
+// A row in the Sales history list (Phase 9, append-only transactions).
+// PaymentType / DiscountType are defined with the POS types below.
+export interface TransactionListRow {
+    id: string;
+    transaction_number: string;
+    payment_type: PaymentType;
+    discount: string;
+    discount_type: DiscountType | null;
+    total: string;
+    created_at: string;
+    items_count: number;
+    user: Pick<User, 'id' | 'name' | 'username'> | null;
+}
+
+// A single sold line on a transaction detail. `cost` is present only for a
+// viewer who may see Item Cost (Owner).
+export interface TransactionItemLine {
+    id: string;
+    label: string;
+    quantity: number;
+    selling_price: string;
+    discount: string;
+    total: string;
+    cost?: string | null;
+}
+
+// The full transaction detail (Phase 9 receipt-style view).
+export interface TransactionDetail {
+    id: string;
+    transaction_number: string;
+    payment_type: PaymentType;
+    discount: string;
+    discount_type: DiscountType | null;
+    total: string;
+    cash_received: string | null;
+    change: string | null;
+    comment: string | null;
+    created_at: string;
+    user: Pick<User, 'id' | 'name' | 'username'> | null;
+    items: TransactionItemLine[];
+}
+
 export interface PaginationLink {
     url: string | null;
     label: string;

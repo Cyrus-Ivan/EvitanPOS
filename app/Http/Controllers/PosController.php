@@ -235,7 +235,6 @@ class PosController extends Controller
 
         $transaction = Transaction::create([
             'transaction_number' => $number,
-            'receipt_number' => $number,
             'payment_type' => $data['payment_type'],
             'discount' => $storedDiscount,
             'discount_type' => $storedDiscountType,
@@ -253,8 +252,6 @@ class PosController extends Controller
             TransactionItem::create([
                 'transaction_id' => $transaction->getKey(),
                 'variant_id' => $variant->getKey(),
-                // line_type defaults to 'sale'; source_transaction_item_id stays
-                // null (returns/defects reference it in Phase 10).
                 'quantity' => $row['quantity'],
                 'selling_price' => $variant->selling_price,
                 'cost' => $variant->cost,

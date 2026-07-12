@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Variant;
 use App\Support\Inventory\StockLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class TransactionNumberTest extends TestCase
@@ -34,7 +35,7 @@ class TransactionNumberTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
-    public function test_numbers_embed_date_and_time_and_increment_daily()
+    public function test_numbers_are_a_continuous_zero_padded_serial()
     {
         $variant = $this->sellable(stock: 5);
         $cashier = User::factory()->cashier()->create();
@@ -44,20 +45,30 @@ class TransactionNumberTest extends TestCase
 
         $numbers = Transaction::orderBy('created_at')->pluck('transaction_number')->all();
 
-        // YYYYMMDD-HHMMSS-000000 with a daily sequence that increments.
+        // A gapless, zero-padded running serial (BIR-shaped: unique, consecutive).
         foreach ($numbers as $number) {
-            $this->assertMatchesRegularExpression('/^\d{8}-\d{6}-\d{6}$/', $number);
+            $this->assertMatchesRegularExpression('/^\d{10}$/', $number);
         }
-        $this->assertStringEndsWith('-000001', $numbers[0]);
-        $this->assertStringEndsWith('-000002', $numbers[1]);
+        $this->assertSame('0000000001', $numbers[0]);
+        $this->assertSame('0000000002', $numbers[1]);
     }
 
-    public function test_receipt_number_equals_transaction_number()
+    public function test_serial_does_not_reset_across_a_day_boundary()
     {
         $variant = $this->sellable(stock: 5);
-        $this->sell($variant, User::factory()->cashier()->create());
+        $cashier = User::factory()->cashier()->create();
 
-        $transaction = Transaction::sole();
-        $this->assertSame($transaction->transaction_number, $transaction->receipt_number);
+        $this->travelTo(Carbon::parse('2026-07-12 09:00:00'));
+        $this->sell($variant, $cashier);
+
+        // A new calendar day must NOT restart the sequence — the series continues.
+        $this->travelTo(Carbon::parse('2026-07-13 09:00:00'));
+        $this->sell($variant, $cashier);
+
+        $this->travelBack();
+
+        $numbers = Transaction::orderBy('created_at')->pluck('transaction_number')->all();
+        $this->assertSame('0000000001', $numbers[0]);
+        $this->assertSame('0000000002', $numbers[1]);
     }
 }

@@ -11,10 +11,12 @@ class Transaction extends Model
 {
     use HasUuidPrimaryKey;
 
+    // Append-only: a completed sale is immutable business history.
+    public const UPDATED_AT = null;
+
     /** @var list<string> */
     protected $fillable = [
         'transaction_number',
-        'receipt_number',
         'payment_type',
         'discount',
         'discount_type',

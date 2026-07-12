@@ -10,10 +10,11 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            // Human-readable, format YYYYMMDD-HHMMSS-000001, sequence resets daily.
+            // Serves as both the internal transaction id and the customer-facing
+            // receipt/invoice number. A continuous, gapless, zero-padded serial
+            // that never resets — the shape a BIR-registered CRM/POS serial takes
+            // (unique, consecutive, non-resetting). See TransactionNumberGenerator.
             $table->string('transaction_number')->unique();
-            // Receipt number equals the transaction number.
-            $table->string('receipt_number');
             // Allowed: cash | online | others
             $table->string('payment_type');
             $table->decimal('discount', 12, 2)->default(0);
@@ -23,9 +24,10 @@ return new class extends Migration
             $table->decimal('cash_received', 12, 2)->nullable();
             $table->decimal('change', 12, 2)->nullable();
             $table->foreignUuid('user_id')->constrained()->restrictOnDelete();
-            $table->timestamps();
+            // Append-only: a completed sale is immutable business history, so
+            // there is no updated_at (matches inventory_ledger / audit_logs).
+            $table->timestamp('created_at')->useCurrent();
 
-            $table->index('receipt_number');
             $table->index('created_at');
             $table->index('user_id');
         });

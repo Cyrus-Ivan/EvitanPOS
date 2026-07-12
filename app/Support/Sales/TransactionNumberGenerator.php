@@ -3,33 +3,36 @@
 namespace App\Support\Sales;
 
 use App\Models\Transaction;
-use Illuminate\Support\Carbon;
 
 /**
- * Builds the human-readable transaction/receipt number for a sale.
+ * Builds the transaction/receipt number for a sale.
  *
- * Format: YYYYMMDD-HHMMSS-000001 — the calendar date, the wall-clock time of
- * the sale, and a zero-padded sequence that resets every day. The receipt
- * number equals the transaction number (BRAINSTORM.md).
+ * Format: a continuous, zero-padded running serial — 0000000001, 0000000002, …
+ * It never resets (no date component; the timestamp lives in `created_at`) and
+ * has no gaps across committed sales. This is the shape a BIR-registered CRM/POS
+ * document serial must take — unique, consecutive, non-resetting — so this one
+ * number serves as both the internal transaction id and the customer-facing
+ * receipt number.
  *
- * The daily sequence — not the time — is what makes a number unique, so two
- * sales in the same second still differ. Concurrency safety does not live here:
- * the caller wraps generate + insert in a bounded retry and leans on the
- * `transaction_number` UNIQUE index as the integrity backstop (there is no
- * counter row to lock; SQLite serializes writers anyway).
+ * The sequence is derived from the row count, so concurrency safety does not
+ * live here: the caller wraps generate + insert in a bounded retry and leans on
+ * the `transaction_number` UNIQUE index as the integrity backstop (there is no
+ * counter row to lock; SQLite serializes writers anyway). Committed serials stay
+ * gapless because a rolled-back sale never claims a number.
+ *
+ * TODO(compliance): a real BIR Authority-To-Print (ATP) range needs a
+ * configurable series prefix and starting serial (per-registration). Not built
+ * here — the format is range-ready but starts at 1 with no prefix.
  */
 class TransactionNumberGenerator
 {
+    /** Zero-pad width of the running serial. */
+    private const PAD_WIDTH = 10;
+
     public function next(): string
     {
-        $now = Carbon::now();
-        $datePrefix = $now->format('Ymd');
-        $time = $now->format('His');
+        $sequence = Transaction::query()->count() + 1;
 
-        $sequence = Transaction::query()
-            ->where('transaction_number', 'like', $datePrefix.'-%')
-            ->count() + 1;
-
-        return sprintf('%s-%s-%06d', $datePrefix, $time, $sequence);
+        return sprintf('%0'.self::PAD_WIDTH.'d', $sequence);
     }
 }

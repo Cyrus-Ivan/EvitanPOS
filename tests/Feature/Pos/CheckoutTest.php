@@ -60,7 +60,6 @@ class CheckoutTest extends TestCase
         $item = TransactionItem::sole();
         $this->assertSame($variant->id, $item->variant_id);
         $this->assertSame(3, $item->quantity);
-        $this->assertSame('sale', $item->line_type);
         $this->assertSame('300.00', $item->total);
 
         // Stock deducted and a matching sale ledger row appended.
