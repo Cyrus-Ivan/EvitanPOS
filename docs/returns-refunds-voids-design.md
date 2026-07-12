@@ -1,8 +1,14 @@
-# Returns, Refunds, Voids & Defects — Authoritative Design
+# Returns, Refunds & Defects — Authoritative Design
 
 > **Status:** Design of record. Future agents building **Phase 6 (Ledger)**,
 > **Phase 9 (Transactions)**, and **Phase 10 (Returns & Defects)** MUST implement the
 > schema and rules exactly as specified here. Referenced from `ROADMAP.md`.
+>
+> **Void removed.** A void was a full reversal of an *untouched* transaction — which is
+> functionally identical to unselecting the item from the cart at the POS **before**
+> checkout, something the POS page already supports. Post-checkout, the only after-sales
+> events are **return** and **defect**. (The filename keeps "voids" only because it is
+> referenced across the codebase.)
 
 ## Why this exists
 
@@ -15,7 +21,7 @@ item set changes *the set of lines on that receipt* — so reprinting it later w
 longer match the original sale.
 
 **Design goal:** `transactions` + `transaction_items` are a frozen, append-only record of
-the **sale only**. All after-sales activity (returns, refunds, voids, defects) lives in a
+the **sale only**. All after-sales activity (returns, refunds, defects) lives in a
 dedicated table family that **references** the original sale without ever mutating it.
 
 ---
@@ -25,16 +31,11 @@ dedicated table family that **references** the original sale without ever mutati
 | Type | Stock | Money | Scope | Notes |
 |------|-------|-------|-------|-------|
 | **Return** | Restored (`+qty` ledger) | Refund at original captured price | Partial + multiple | Cumulative per line ≤ sold qty |
-| **Void** | Restored for **all** lines | Refund = full `transaction.total` | Whole transaction, **untouched only** | Blocked if any return/defect already exists |
 | **Defect** | **Not** restored | Write-off (reduces net sales) | Partial + multiple | 0-movement ledger entry for audit |
-| **Refund** | — | The monetary result of a return/void | — | Not a separate type; an attribute of the event |
+| **Refund** | — | The monetary result of a return | — | Not a separate type; an attribute of the event |
 
-**Void rule (edge-case killer):** a void is only allowed on a transaction with **zero**
-existing after-sales rows. It reverses *every* sale line at full sold quantity, restores
-all stock, and refunds exactly `transaction.total`. Once a transaction has been partially
-returned/defected, void is disabled and the user must use returns. Void and returns are
-therefore mutually exclusive on a transaction, which removes any "void exceeds remaining
-quantity" ambiguity.
+> A "cancel the whole sale" need before checkout is handled at the POS by unselecting
+> items from the cart; after checkout, reversing everything is just a return of every line.
 
 ---
 
@@ -44,14 +45,14 @@ Two new tables. **Naming note:** do **not** name the model `Return` — `return`
 reserved word and will not compile. Use table `sale_returns` / model `SaleReturn` and
 table `sale_return_items` / model `SaleReturnItem`.
 
-### `sale_returns` — event header (one per return/void/defect event)
+### `sale_returns` — event header (one per return/defect event)
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | uuid pk | |
 | `return_number` | string, **unique** | Human-readable `RET-YYYYMMDD-000001`, sequence resets daily. Reuse the same generator approach as `transaction_number`. |
 | `transaction_id` | uuid FK → `transactions` | `restrictOnDelete` |
-| `type` | string | `return \| void \| defect` |
+| `type` | string | `return \| defect` |
 | `reason` | text, nullable | |
 | `refund_payment_type` | string, nullable | `cash \| online \| others` — how money was returned; nullable for defect / no-cash |
 | `total_refund` | decimal(12,2), default 0 | Snapshot sum of line `refund_amount`. Convenience only — reports **recompute** from lines. |
@@ -77,7 +78,7 @@ Indexes: `transaction_id`, `type`, `created_at`, `return_number`.
 Indexes: `sale_return_id`, `transaction_item_id`, `variant_id`.
 
 `restores_stock` is **not** stored — it is derived from `sale_returns.type`
-(`return`/`void` restore, `defect` does not).
+(`return` restores, `defect` does not).
 
 ---
 
@@ -92,24 +93,19 @@ require  new_qty >= 1
 require  already + new_qty <= S.quantity
 ```
 
-This single rule covers partial returns, multiple returns, defects, and voids — the
-**cumulative** returned/defected/voided quantity per original line can never exceed what
-was sold.
+This single rule covers partial returns, multiple returns, and defects — the
+**cumulative** returned/defected quantity per original line can never exceed what was sold.
 
 The whole write (validation → header → lines → ledger → snapshot update → audit log) runs
 inside **one DB transaction** so it is atomic. Re-check `already` **inside** the
 transaction to stay race-safe even though the app is single-user.
-
-**Void** additionally requires `SUM(all sale_return_items for this transaction) == 0`
-before it runs (untouched-only rule), then writes one line per sale `transaction_item` at
-its full `quantity`.
 
 ---
 
 ## Refund amount algorithm (discount-correct, cent-exact)
 
 Refunds must reflect what the customer **actually paid** — including line- and
-transaction-level discounts — and a full void must refund exactly `transaction.total`.
+transaction-level discounts — so returning every line refunds exactly `transaction.total`.
 
 1. Each sale line's paid share of the transaction total:
    ```
@@ -125,7 +121,7 @@ transaction-level discounts — and a full void must refund exactly `transaction
    `refund_amount = line_paid(S) - SUM(prior refund_amounts for S)` so cumulative refunds
    for a fully returned line equal `line_paid(S)` with no drift.
 
-Result: fully returning/voiding a transaction refunds exactly `transaction.total`.
+Result: fully returning every line of a transaction refunds exactly `transaction.total`.
 
 ---
 
@@ -138,7 +134,7 @@ Result: fully returning/voiding a transaction refunds exactly `transaction.total
   `transaction | manual_adjustment`). This is a string column, so only the migration
   **comment** and validation change — no structural migration.
 - Per `sale_return_item`:
-  - **return / void** → insert a ledger row: `quantity = +qty`,
+  - **return** → insert a ledger row: `quantity = +qty`,
     `resulting_snapshot = prev + qty`, `type = 'sale'`, `sale_type = 'return'`,
     `reference_type = 'return'`, `reference_id = sale_returns.id`, `performed_by`.
   - **defect** → insert a ledger row with `quantity = 0` (stock unchanged),
@@ -146,8 +142,7 @@ Result: fully returning/voiding a transaction refunds exactly `transaction.total
     satisfies `BRAINSTORM.md` ("defects generate a ledger entry") while honoring "defects
     do not restore stock" — the 0-movement row is a pure audit trail.
 - The stock snapshot (Phase 6) is updated from these ledger inserts as normal.
-  Returns/voids can only **increase** stock, so the never-negative rule is never at risk
-  here.
+  Returns can only **increase** stock, so the never-negative rule is never at risk here.
 
 ---
 
@@ -185,7 +180,6 @@ Because there is **no production data** (pre-release; the dev DB is re-creatable
 ## Permissions (default — confirm during Phase 10)
 
 - Process **return**: Cashier and up (they work the POS).
-- Process **void**: Admin and up (full reversal is higher-risk).
 - Process **defect**: Admin and up (inventory write-off).
 - `cost` on `sale_return_items` stays **Owner-only** via `HidesCostFromNonOwners`.
 
@@ -193,18 +187,17 @@ Because there is **no production data** (pre-release; the dev DB is re-creatable
 
 ## Reporting & audit
 
-- Reports **recompute**: `net sales = sales − returns − voids − defects`, summing
+- Reports **recompute**: `net sales = sales − returns − defects`, summing
   `sale_return_items` (never a single stored total), per `CLAUDE.md` → "Reporting".
-- Every return / void / defect writes an **`audit_logs`** entry (wired in Phase 15).
+- Every return / defect writes an **`audit_logs`** entry (wired in Phase 15).
 
 ---
 
 ## Edge cases covered (checklist for the implementing agent)
 
 - [ ] Multiple partial returns against one line never exceed sold quantity (cumulative quota).
-- [ ] Returns/defects/voids share the **same** per-line quota (they all consume sold qty).
-- [ ] Void blocked once any return/defect exists; otherwise reverses all lines fully.
-- [ ] Full void refunds exactly `transaction.total`; full line return refunds exactly `line_paid(S)` (no cent drift).
+- [ ] Returns/defects share the **same** per-line quota (they both consume sold qty).
+- [ ] Full line return refunds exactly `line_paid(S)` (no cent drift); returning every line refunds exactly `transaction.total`.
 - [ ] Returns use the **captured** selling price/cost, never the current variant values.
 - [ ] Transaction-level discount apportioned into refunds.
 - [ ] Defect restores no stock but still writes a 0-movement ledger row.

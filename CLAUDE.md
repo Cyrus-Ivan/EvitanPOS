@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is **pre-scaffold**. It currently contains only planning documents — `BRAINSTORM.md` (full functional spec) and `ROADMAP.md` (phased build plan). No Laravel/React application has been generated yet, so there are no build, lint, or test commands to run. The first task (Roadmap Phase 0) is to scaffold the app.
+The Laravel + React (Inertia) + NativePHP + SQLite app is **scaffolded and under active development**, building out the phases in `ROADMAP.md` in order. As of this writing the core commerce chain is complete through **Phase 8 (POS checkout)** — Phases 0–8 (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS) — plus the admin/ops track (**Phase 13 User Management, 14 Login History, 16 Database Backup**). Phase 10 (Returns/Refunds/Defects — void was dropped) has an authoritative design doc (`docs/returns-refunds-voids-design.md`) but is not yet implemented; Phase 15 (Audit Logs) is deliberately deferred to a single cross-cutting pass (write-paths carry `// TODO(Phase 15): audit ...` markers). Per-phase implementation notes live in the agent memory index, not here — treat this paragraph as approximate and confirm current progress against `git log` and the code.
+
+`BRAINSTORM.md` is the full functional spec and `ROADMAP.md` is the phased build plan. Where `BRAINSTORM.md` and the code disagree on after-sales behavior, `docs/returns-refunds-voids-design.md` is the design of record.
 
 Note: the product is named **Evitan POS**. Use "Evitan POS" for user-facing names unless told otherwise.
 
@@ -12,13 +14,13 @@ Note: the product is named **Evitan POS**. Use "Evitan POS" for user-facing name
 
 Evitan POS is an **offline-first retail Point of Sale** desktop app for a **single business installation**. No server, no cloud, no network dependency. Multi-branch and cloud sync are explicitly out of scope for the MVP but the schema should stay sync-compatible (hence UUIDs everywhere).
 
-## Intended stack
+## Stack
 
-- **Laravel** (backend) + **React** (frontend), generated with `laravel new` using the **React preset** (Inertia-based).
+- **Laravel 12** (backend) + **React 19 / TypeScript** (frontend) over **Inertia**, from the Laravel React starter kit. Pinned to Laravel 12 for NativePHP compatibility.
 - **NativePHP** to package it as a native desktop executable.
-- **SQLite** as the only database. Enable foreign key enforcement.
+- **SQLite** as the only database (`database/nativephp.sqlite`, shared by terminal artisan and the NativePHP runtime). Foreign key enforcement is on.
 
-Once scaffolded, standard Laravel workflow applies (`php artisan migrate`, `php artisan test` / Pest, `npm run dev`, and NativePHP's `php artisan native:serve` / `native:build`). Confirm the actual scripts in the generated `composer.json` / `package.json` before relying on them — do not assume commands that the scaffold hasn't produced.
+Standard Laravel workflow applies: `php artisan migrate` (or `migrate:fresh --seed`), `php artisan test` (Pest/PHPUnit), `npm run dev` / `npm run build`, `npm run lint`, `./vendor/bin/pint`, and NativePHP's `php artisan native:serve` / `native:build`. Dev login is `owner` / `password`. Verify script details in `composer.json` / `package.json` if in doubt.
 
 ## Non-negotiable invariants
 

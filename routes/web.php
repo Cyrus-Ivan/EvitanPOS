@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
     // detail view is Owner-only, gated inside the controller.
     Route::get('sales', [SalesController::class, 'index'])->name('sales');
     Route::get('sales/{transaction}', [SalesController::class, 'show'])->name('sales.show');
+    // Returns / defects (Phase 10). Cashier-level for returns; the controller
+    // elevates defect to Admin+ by the submitted type.
+    Route::post('sales/{transaction}/returns', [SaleReturnController::class, 'store'])->name('sales.returns.store');
     Route::get('login-history', [LoginHistoryController::class, 'index'])->name('login-history');  // Phase 14
 
     // Inventory (Phase 5). Viewing is Cashier-level (read-only); every write is

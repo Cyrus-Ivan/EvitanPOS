@@ -6,6 +6,7 @@ use App\Models\Concerns\HasUuidPrimaryKey;
 use App\Models\Concerns\HidesCostFromNonOwners;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TransactionItem extends Model
 {
@@ -50,5 +51,16 @@ class TransactionItem extends Model
     public function variant(): BelongsTo
     {
         return $this->belongsTo(Variant::class);
+    }
+
+    /**
+     * After-sales lines (returns / defects) written against this sold
+     * line. Their cumulative quantity can never exceed this line's quantity.
+     *
+     * @return HasMany<SaleReturnItem, $this>
+     */
+    public function returnItems(): HasMany
+    {
+        return $this->hasMany(SaleReturnItem::class, 'transaction_item_id');
     }
 }

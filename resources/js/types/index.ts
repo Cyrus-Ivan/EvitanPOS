@@ -135,6 +135,33 @@ export interface TransactionItemLine {
     discount: string;
     total: string;
     cost?: string | null;
+    // How much of this line has already been returned/defected (Phase 10).
+    returned_quantity: number;
+}
+
+// After-sales event types (Phase 10). See docs/returns-refunds-voids-design.md.
+export type SaleReturnType = 'return' | 'defect';
+
+// A line of an after-sales event. `cost` is Owner-only (absent otherwise).
+export interface SaleReturnLine {
+    id: string;
+    label: string;
+    quantity: number;
+    refund_amount: string;
+    cost?: string | null;
+}
+
+// A recorded return / defect against a transaction (Phase 10).
+export interface SaleReturnEvent {
+    id: string;
+    return_number: string;
+    type: SaleReturnType;
+    reason: string | null;
+    refund_payment_type: PaymentType | null;
+    total_refund: string;
+    created_at: string;
+    performed_by: Pick<User, 'id' | 'name' | 'username'> | null;
+    items: SaleReturnLine[];
 }
 
 // The full transaction detail (Phase 9 receipt-style view).
@@ -151,6 +178,8 @@ export interface TransactionDetail {
     created_at: string;
     user: Pick<User, 'id' | 'name' | 'username'> | null;
     items: TransactionItemLine[];
+    // After-sales history (Phase 10), newest first.
+    returns: SaleReturnEvent[];
 }
 
 export interface PaginationLink {

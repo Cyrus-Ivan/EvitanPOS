@@ -319,6 +319,8 @@ Reference Types
 
 * Transaction
 * Manual Adjustment
+* CSV Import
+* Return (after-sales events — see below)
 
 ---
 
@@ -404,10 +406,10 @@ Sales consist of
 Transaction Number Format
 
 ```
-YYYYMMDD-000001
+YYYYMMDD-HHMMSS-000001
 ```
 
-Sequence resets every day.
+The calendar date, the wall-clock time of the sale, and a zero-padded sequence that resets every day.
 
 Receipt Number equals Transaction Number.
 
@@ -457,7 +459,18 @@ Changing an item's Selling Price or Item Cost never affects previous transaction
 
 ---
 
-# Returns
+# Returns & Defects
+
+> **Authoritative schema and rules live in `docs/returns-refunds-voids-design.md`** — the
+> design of record. Returns/defects are **NOT** stored as additional transaction items
+> (that would mutate a completed sale and break immutable business history). They live in a
+> dedicated `sale_returns` / `sale_return_items` table family that *references* the original
+> sale without ever changing it. The summary below is intent only; implement per the design doc.
+>
+> **Void was removed** — it duplicated cancelling a sale at the POS before checkout (unselect
+> the item from the cart), which is already supported. Post-checkout, use returns.
+
+## Returns
 
 Returns are supported.
 
@@ -468,25 +481,22 @@ Rules
 * Total returned quantity must never exceed the originally sold quantity.
 * Returns always use the original selling price stored in the transaction.
 * Returns generate Ledger entries.
-* Returns become additional Transaction Items.
+* Returns are recorded in `sale_returns` / `sale_return_items` (never added to the original transaction).
 * Original sale remains unchanged.
-
-Reports recompute totals by subtracting returns.
 
 Returned inventory goes back into stock.
 
----
+## Defects
 
-# Defects
-
-Defects represent cancelled products that do not return to inventory.
+Defects represent written-off products that do not return to inventory.
 
 Rules
 
-* Generates Ledger entry.
-* Added as another Transaction Item.
-* Original sale remains unchanged.
+* Generates a 0-movement Ledger entry (audit trail only; stock unchanged).
+* Recorded in `sale_returns` / `sale_return_items`; original sale remains unchanged.
 * Inventory is not restored.
+
+Reports recompute totals by subtracting returns and defects.
 
 ---
 

@@ -52,4 +52,15 @@ class Transaction extends Model
     {
         return $this->hasMany(TransactionItem::class);
     }
+
+    /**
+     * After-sales events (returns / defects) recorded against this sale.
+     * They reference the sale without ever mutating it.
+     *
+     * @return HasMany<SaleReturn, $this>
+     */
+    public function saleReturns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
+    }
 }

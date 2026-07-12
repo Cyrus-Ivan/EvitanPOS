@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SaleReturn;
+use App\Models\SaleReturnItem;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
@@ -77,7 +79,14 @@ class SalesController extends Controller
 
     public function show(Transaction $transaction): Response
     {
-        $transaction->load(['items.variant.item:id,name,unit', 'user:id,name,username']);
+        $transaction->load([
+            'items' => fn ($query) => $query->withSum('returnItems as returned_quantity', 'quantity'),
+            'items.variant.item:id,name,unit',
+            'user:id,name,username',
+            'saleReturns' => fn ($query) => $query->orderByDesc('created_at'),
+            'saleReturns.performedBy:id,name,username',
+            'saleReturns.items.sourceItem.variant.item:id,name,unit',
+        ]);
 
         // Item cost is Owner-only; gate it here because we hand-build the payload
         // (bypassing the model's HidesCostFromNonOwners serialization guard).
@@ -108,6 +117,9 @@ class SalesController extends Controller
                         'selling_price' => $item->selling_price,
                         'discount' => $item->discount,
                         'total' => $item->total,
+                        // How much of this line has already been returned/defected
+                        // — the modal caps inputs against the remainder.
+                        'returned_quantity' => (int) ($item->returned_quantity ?? 0),
                     ];
 
                     // Cost is Owner-only: the key is absent entirely for others.
@@ -117,6 +129,34 @@ class SalesController extends Controller
 
                     return $line;
                 })->all(),
+                'returns' => $transaction->saleReturns->map(fn (SaleReturn $saleReturn) => [
+                    'id' => $saleReturn->id,
+                    'return_number' => $saleReturn->return_number,
+                    'type' => $saleReturn->type,
+                    'reason' => $saleReturn->reason,
+                    'refund_payment_type' => $saleReturn->refund_payment_type,
+                    'total_refund' => $saleReturn->total_refund,
+                    'created_at' => $saleReturn->created_at,
+                    'performed_by' => $saleReturn->performedBy ? [
+                        'id' => $saleReturn->performedBy->id,
+                        'name' => $saleReturn->performedBy->name,
+                        'username' => $saleReturn->performedBy->username,
+                    ] : null,
+                    'items' => $saleReturn->items->map(function (SaleReturnItem $line) use ($canViewCost) {
+                        $row = [
+                            'id' => $line->id,
+                            'label' => $line->sourceItem ? $this->itemLabel($line->sourceItem) : 'Unknown product',
+                            'quantity' => $line->quantity,
+                            'refund_amount' => $line->refund_amount,
+                        ];
+
+                        if ($canViewCost) {
+                            $row['cost'] = $line->cost;
+                        }
+
+                        return $row;
+                    })->all(),
+                ])->all(),
             ],
             'canViewCost' => $canViewCost,
         ]);

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Sale lines only. Prices and costs are snapshotted onto each row at time of
-     * sale and never change. Append-only: after-sales activity (returns, voids,
+     * sale and never change. Append-only: after-sales activity (returns,
      * defects) lives in the separate sale_returns family and references these
      * rows without mutating them — see docs/returns-refunds-voids-design.md.
      */

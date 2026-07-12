@@ -221,7 +221,7 @@ Implement
 * Return entries
 * Defect entries
 
-Return/void entries restore stock; defect entries are 0-movement audit rows. See `docs/returns-refunds-voids-design.md`.
+Return entries restore stock; defect entries are 0-movement audit rows. See `docs/returns-refunds-voids-design.md`.
 
 Ledger becomes append-only.
 
@@ -329,7 +329,7 @@ Historical Discounts
 
 Generate Ledger entries.
 
-`transaction_items` holds sale lines only; `transactions` and `transaction_items` are immutable (append-only, no `updated_at`). Returns/voids/defects live in `sale_returns` — see `docs/returns-refunds-voids-design.md`.
+`transaction_items` holds sale lines only; `transactions` and `transaction_items` are immutable (append-only, no `updated_at`). Returns/defects live in `sale_returns` — see `docs/returns-refunds-voids-design.md`.
 
 **Milestone**
 
@@ -337,11 +337,12 @@ Sales become permanent.
 
 ---
 
-# Phase 10 — Returns, Refunds, Voids & Defects
+# Phase 10 — Returns, Refunds & Defects
 
 ## Goal
 
-Support after-sales workflow.
+Support after-sales workflow. (Void was dropped — cancelling before checkout is handled at
+the POS by unselecting cart items; post-checkout use returns.)
 
 **Implement per `docs/returns-refunds-voids-design.md` (authoritative schema + rules).**
 
@@ -350,8 +351,6 @@ Features
 Partial Return
 
 Multiple Return
-
-Void
 
 Defect
 
@@ -362,10 +361,6 @@ Validation
 Returns
 
 * Restore stock
-
-Voids
-
-* Untouched transactions only; reverse all lines
 
 Defects
 
