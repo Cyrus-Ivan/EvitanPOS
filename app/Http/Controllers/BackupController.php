@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use App\Support\Backup\DatabaseBackupManager;
+use App\Support\Backup\DirectoryPicker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +18,9 @@ use RuntimeException;
  */
 class BackupController extends Controller
 {
+    /** Settings key remembering the last folder used for an external backup. */
+    private const EXTERNAL_DIRECTORY_KEY = 'backup_external_directory';
+
     public function index(DatabaseBackupManager $manager): Response
     {
         return Inertia::render('backup', [
@@ -24,6 +29,9 @@ class BackupController extends Controller
                 'size' => $this->formatBytes($backup['size']),
                 'created_at' => date(DATE_ATOM, $backup['created_at']),
             ], $manager->list()),
+            // Native folder/file dialogs only exist in the desktop runtime; the
+            // frontend disables the external actions when this is false.
+            'isDesktop' => (bool) config('nativephp-internal.running'),
         ]);
     }
 
@@ -58,6 +66,71 @@ class BackupController extends Controller
             'type' => 'success',
             'message' => 'Database restored. A safety backup of the previous database was taken automatically.',
         ]);
+    }
+
+    /**
+     * Back up the database to an external drive: the Owner picks a destination
+     * folder via a native dialog, and a timestamped copy is written there. The
+     * chosen folder is remembered as the default for next time.
+     */
+    public function exportExternal(DirectoryPicker $picker, DatabaseBackupManager $manager): RedirectResponse
+    {
+        try {
+            $directory = $picker->pickDirectory($this->lastExternalDirectory());
+
+            if ($directory === null) {
+                return back()->with('toast', ['type' => 'info', 'message' => 'Backup cancelled.']);
+            }
+
+            $manager->export($directory);
+            $this->rememberExternalDirectory($directory);
+        } catch (RuntimeException $e) {
+            return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+
+        // TODO(Phase 15): audit backup.exported
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Backup saved to '.$directory.'.',
+        ]);
+    }
+
+    /**
+     * Restore the database from an arbitrary SQLite file (e.g. one on an
+     * external drive) chosen via a native file dialog. A safety backup of the
+     * current database is taken automatically first.
+     */
+    public function restoreExternal(DirectoryPicker $picker, DatabaseBackupManager $manager): RedirectResponse
+    {
+        try {
+            $file = $picker->pickFile($this->lastExternalDirectory());
+
+            if ($file === null) {
+                return back()->with('toast', ['type' => 'info', 'message' => 'Restore cancelled.']);
+            }
+
+            $manager->restoreFromPath($file);
+        } catch (RuntimeException $e) {
+            return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+
+        // TODO(Phase 15): audit backup.restored
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Database restored. A safety backup of the previous database was taken automatically.',
+        ]);
+    }
+
+    private function lastExternalDirectory(): ?string
+    {
+        return Setting::query()->where('key', self::EXTERNAL_DIRECTORY_KEY)->value('value');
+    }
+
+    private function rememberExternalDirectory(string $directory): void
+    {
+        Setting::updateOrCreate(['key' => self::EXTERNAL_DIRECTORY_KEY], ['value' => $directory]);
     }
 
     /**

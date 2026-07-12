@@ -103,6 +103,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('backup', [BackupController::class, 'index'])->name('backup');
         Route::post('backup', [BackupController::class, 'store'])->name('backup.store');
         Route::post('backup/restore', [BackupController::class, 'restore'])->name('backup.restore');
+        // Back up to / restore from an external drive via native OS dialogs.
+        Route::post('backup/external', [BackupController::class, 'exportExternal'])->name('backup.external');
+        Route::post('backup/restore-external', [BackupController::class, 'restoreExternal'])->name('backup.restore-external');
     });
 });
 

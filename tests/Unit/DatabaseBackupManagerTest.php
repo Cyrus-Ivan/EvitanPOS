@@ -86,6 +86,55 @@ class DatabaseBackupManagerTest extends TestCase
         $this->assertStringContainsString('changed-data', (string) file_get_contents($this->backupDir.'/'.$preRestore[0]['name']));
     }
 
+    public function test_export_copies_the_database_into_an_external_directory(): void
+    {
+        $externalDir = $this->workDir.'/usb';
+        mkdir($externalDir, 0755, true);
+
+        $path = $this->manager()->export($externalDir);
+
+        $this->assertSame($externalDir, dirname($path));
+        $this->assertNotEmpty(glob($externalDir.'/backup-*.sqlite'));
+        $this->assertSame(file_get_contents($this->dbPath), file_get_contents($path));
+    }
+
+    public function test_export_rejects_a_non_existent_destination(): void
+    {
+        $this->expectException(RuntimeException::class);
+
+        $this->manager()->export($this->workDir.'/not-mounted');
+    }
+
+    public function test_restore_from_path_takes_a_pre_restore_backup_then_swaps_contents(): void
+    {
+        $manager = $this->manager();
+
+        // An external file standing in for a backup on a USB drive.
+        $external = $this->workDir.'/external-backup.sqlite';
+        file_put_contents($external, "SQLite format 3\0external-data");
+
+        $manager->restoreFromPath($external);
+
+        $this->assertStringContainsString('external-data', (string) file_get_contents($this->dbPath));
+
+        $preRestore = array_values(array_filter(
+            $manager->list(),
+            fn ($b) => str_starts_with($b['name'], 'pre-restore-'),
+        ));
+        $this->assertCount(1, $preRestore);
+        $this->assertStringContainsString('original-data', (string) file_get_contents($this->backupDir.'/'.$preRestore[0]['name']));
+    }
+
+    public function test_restore_from_path_rejects_a_non_sqlite_file(): void
+    {
+        $external = $this->workDir.'/junk.sqlite';
+        file_put_contents($external, 'not a database');
+
+        $this->expectException(RuntimeException::class);
+
+        $this->manager()->restoreFromPath($external);
+    }
+
     public function test_restore_rejects_path_traversal(): void
     {
         $this->expectException(RuntimeException::class);

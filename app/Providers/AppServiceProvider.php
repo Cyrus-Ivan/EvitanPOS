@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Support\Auth\SessionManager;
+use App\Support\Backup\DirectoryPicker;
+use App\Support\Backup\NativeDialogPicker;
 use App\Support\Search\LikeQuery;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -18,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(DirectoryPicker::class, NativeDialogPicker::class);
     }
 
     /**

@@ -81,7 +81,7 @@ class DatabaseBackupManager
 
         $this->ensureDirectory();
 
-        $filename = $prefix.'-'.date('Ymd-His').'-'.substr(bin2hex(random_bytes(3)), 0, 6).'.sqlite';
+        $filename = $this->newBackupFilename($prefix);
 
         if (! copy($this->databasePath, $this->backupDirectory.'/'.$filename)) {
             throw new RuntimeException('Failed to write the backup file.');
@@ -91,13 +91,47 @@ class DatabaseBackupManager
     }
 
     /**
+     * Copy the live database into an external directory (e.g. a mounted USB
+     * drive) chosen by the Owner. Unlike create(), the destination directory
+     * must already exist — we never create folders on removable media.
+     *
+     * @return string The full path of the written backup file.
+     */
+    public function export(string $destinationDirectory, string $prefix = 'backup'): string
+    {
+        if (! is_file($this->databasePath)) {
+            throw new RuntimeException('The database file does not exist.');
+        }
+
+        if (! is_dir($destinationDirectory) || ! is_writable($destinationDirectory)) {
+            throw new RuntimeException('The selected folder is not a writable directory.');
+        }
+
+        $destination = rtrim($destinationDirectory, '/\\').'/'.$this->newBackupFilename($prefix);
+
+        if (! copy($this->databasePath, $destination)) {
+            throw new RuntimeException('Failed to write the backup file to the selected folder.');
+        }
+
+        return $destination;
+    }
+
+    /**
      * Restore the database from a named backup, taking an automatic pre-restore
      * safety backup of the current file first.
      */
     public function restore(string $filename): void
     {
-        $source = $this->resolveBackupPath($filename);
+        $this->restoreFromPath($this->resolveBackupPath($filename));
+    }
 
+    /**
+     * Restore the database from an arbitrary SQLite file (e.g. one picked from
+     * an external drive), taking an automatic pre-restore safety backup of the
+     * current file first.
+     */
+    public function restoreFromPath(string $source): void
+    {
         if (! is_file($source)) {
             throw new RuntimeException('Backup file not found.');
         }
@@ -143,6 +177,15 @@ class DatabaseBackupManager
         fclose($handle);
 
         return $header === self::SQLITE_HEADER;
+    }
+
+    /**
+     * A unique, timestamped backup filename. The prefix distinguishes manual
+     * backups from automatic pre-restore safety copies.
+     */
+    private function newBackupFilename(string $prefix): string
+    {
+        return $prefix.'-'.date('Ymd-His').'-'.substr(bin2hex(random_bytes(3)), 0, 6).'.sqlite';
     }
 
     private function ensureDirectory(): void

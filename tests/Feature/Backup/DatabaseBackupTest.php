@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Backup;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\Backup\DatabaseBackupManager;
+use App\Support\Backup\DirectoryPicker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -57,6 +59,28 @@ class DatabaseBackupTest extends TestCase
         rmdir($dir);
     }
 
+    /**
+     * Bind a fake picker that returns a preset path (null = user cancelled),
+     * standing in for the native OS dialog which needs the desktop runtime.
+     */
+    private function fakePicker(?string $directory, ?string $file): void
+    {
+        $this->app->instance(DirectoryPicker::class, new class($directory, $file) implements DirectoryPicker
+        {
+            public function __construct(private ?string $directory, private ?string $file) {}
+
+            public function pickDirectory(?string $default = null): ?string
+            {
+                return $this->directory;
+            }
+
+            public function pickFile(?string $default = null): ?string
+            {
+                return $this->file;
+            }
+        });
+    }
+
     public function test_owner_can_view_the_backup_page(): void
     {
         $this->actingAs(User::factory()->owner()->create())
@@ -103,12 +127,57 @@ class DatabaseBackupTest extends TestCase
             ->assertSessionHas('toast.type', 'error');
     }
 
+    public function test_owner_can_back_up_to_an_external_folder_and_the_folder_is_remembered(): void
+    {
+        $external = $this->workDir.'/usb';
+        mkdir($external, 0755, true);
+        $this->fakePicker($external, null);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('backup.external'))
+            ->assertRedirect()
+            ->assertSessionHas('toast.type', 'success');
+
+        $this->assertNotEmpty(glob($external.'/backup-*.sqlite'));
+        $this->assertSame($external, Setting::query()->where('key', 'backup_external_directory')->value('value'));
+    }
+
+    public function test_cancelling_the_external_backup_writes_nothing(): void
+    {
+        $this->fakePicker(null, null);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('backup.external'))
+            ->assertRedirect()
+            ->assertSessionHas('toast.type', 'info');
+
+        $this->assertEmpty(glob($this->backupDir.'/*.sqlite') ?: []);
+        $this->assertDatabaseMissing('settings', ['key' => 'backup_external_directory']);
+    }
+
+    public function test_owner_can_restore_from_an_external_file_with_a_pre_restore_backup(): void
+    {
+        $external = $this->workDir.'/external-backup.sqlite';
+        file_put_contents($external, "SQLite format 3\0external-data");
+        $this->fakePicker(null, $external);
+
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('backup.restore-external'))
+            ->assertRedirect()
+            ->assertSessionHas('toast.type', 'success');
+
+        $this->assertStringContainsString('external-data', (string) file_get_contents($this->dbPath));
+        $this->assertNotEmpty(glob($this->backupDir.'/pre-restore-*.sqlite'));
+    }
+
     public function test_admin_and_cashier_are_forbidden(): void
     {
         foreach ([User::factory()->admin()->create(), User::factory()->cashier()->create()] as $user) {
             $this->actingAs($user)->get(route('backup'))->assertForbidden();
             $this->actingAs($user)->post(route('backup.store'))->assertForbidden();
             $this->actingAs($user)->post(route('backup.restore'), ['filename' => 'x.sqlite'])->assertForbidden();
+            $this->actingAs($user)->post(route('backup.external'))->assertForbidden();
+            $this->actingAs($user)->post(route('backup.restore-external'))->assertForbidden();
         }
     }
 }

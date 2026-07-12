@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { DatabaseBackup } from 'lucide-react';
+import { DatabaseBackup, HardDrive, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Database Backup', href: '/backup' }];
@@ -21,7 +21,7 @@ function formatWhen(value: string): string {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function Backup({ backups }: { backups: Backup[] }) {
+export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDesktop: boolean }) {
     const confirm = useConfirm();
     const [processing, setProcessing] = useState(false);
 
@@ -29,6 +29,28 @@ export default function Backup({ backups }: { backups: Backup[] }) {
         setProcessing(true);
         router.post(route('backup.store'), {}, { preserveScroll: true, onFinish: () => setProcessing(false) });
     };
+
+    const exportExternal = () => {
+        setProcessing(true);
+        router.post(route('backup.external'), {}, { preserveScroll: true, onFinish: () => setProcessing(false) });
+    };
+
+    const restoreExternal = async () => {
+        if (
+            await confirm({
+                title: 'Restore from a file?',
+                description:
+                    'Choose a database file to restore. This replaces the current database. A safety backup of the current database is taken automatically before restoring.',
+                destructive: true,
+                confirmLabel: 'Choose file…',
+            })
+        ) {
+            setProcessing(true);
+            router.post(route('backup.restore-external'), {}, { preserveScroll: true, onFinish: () => setProcessing(false) });
+        }
+    };
+
+    const desktopHint = isDesktop ? undefined : 'Available in the desktop app';
 
     const restoreBackup = async (backup: Backup) => {
         if (
@@ -53,9 +75,17 @@ export default function Backup({ backups }: { backups: Backup[] }) {
                         <h1 className="text-lg font-semibold">Database Backup</h1>
                         <p className="text-muted-foreground text-sm">Back up the SQLite database, or restore it from a previous backup.</p>
                     </div>
-                    <Button onClick={createBackup} disabled={processing}>
-                        <DatabaseBackup className="size-4" /> Create backup
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" onClick={restoreExternal} disabled={processing || !isDesktop} title={desktopHint}>
+                            <Upload className="size-4" /> Restore from file
+                        </Button>
+                        <Button variant="outline" onClick={exportExternal} disabled={processing || !isDesktop} title={desktopHint}>
+                            <HardDrive className="size-4" /> Back up to external drive
+                        </Button>
+                        <Button onClick={createBackup} disabled={processing}>
+                            <DatabaseBackup className="size-4" /> Create backup
+                        </Button>
+                    </div>
                 </div>
 
                 {backups.length === 0 ? (
