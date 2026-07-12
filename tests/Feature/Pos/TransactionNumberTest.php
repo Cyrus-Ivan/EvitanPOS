@@ -30,7 +30,7 @@ class TransactionNumberTest extends TestCase
         $this->actingAs($cashier)
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
             ])
             ->assertSessionHasNoErrors();
     }

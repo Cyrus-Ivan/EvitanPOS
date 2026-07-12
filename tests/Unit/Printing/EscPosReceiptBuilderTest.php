@@ -89,15 +89,15 @@ class EscPosReceiptBuilderTest extends TestCase
     public function test_cash_lines_appear_only_for_a_cash_sale(): void
     {
         $cash = (new EscPosReceiptBuilder)->build($this->sampleData());
-        $online = (new EscPosReceiptBuilder)->build($this->sampleData([
-            'payment_label' => 'Online',
+        $cashless = (new EscPosReceiptBuilder)->build($this->sampleData([
+            'payment_label' => 'Cashless',
             'cash_received' => null,
             'change' => null,
         ]));
 
         $this->assertStringContainsString('Cash', $cash);
         $this->assertStringContainsString('Change', $cash);
-        $this->assertStringNotContainsString('Change', $online);
+        $this->assertStringNotContainsString('Change', $cashless);
     }
 
     public function test_a_discount_line_shows_for_both_percentage_and_amount(): void

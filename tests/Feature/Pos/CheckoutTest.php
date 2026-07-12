@@ -107,7 +107,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
             ])
             ->assertSessionHasErrors('lines');
 
@@ -125,7 +125,7 @@ class CheckoutTest extends TestCase
             ->post(route('pos.checkout'), [
                 // Client attempts to spoof price/cost/total — must be ignored.
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1, 'selling_price' => 1, 'cost' => 1, 'total' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
             ])
             ->assertSessionHasNoErrors();
 
@@ -152,7 +152,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 2]], // subtotal 200
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'discount_type' => 'amount',
                 'discount' => 500, // absurd — capped to 200
             ])
@@ -172,7 +172,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 2]], // subtotal 200
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'discount_type' => 'percentage',
                 'discount' => 10, // 20 off
             ])
@@ -190,7 +190,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'discount_type' => 'percentage',
                 'discount' => 150,
             ])
@@ -234,7 +234,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
             ])
             ->assertSessionHasNoErrors();
 
@@ -250,7 +250,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'comment' => '  Held for pickup  ',
             ])
             ->assertSessionHasNoErrors();
@@ -266,7 +266,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'comment' => '   ',
             ])
             ->assertSessionHasNoErrors();
@@ -281,7 +281,7 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->cashier()->create())
             ->post(route('pos.checkout'), [
                 'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
                 'comment' => str_repeat('a', 501),
             ])
             ->assertSessionHasErrors('comment');
@@ -299,7 +299,7 @@ class CheckoutTest extends TestCase
                     ['variant_id' => $variant->id, 'quantity' => 2],
                     ['variant_id' => $variant->id, 'quantity' => 3],
                 ],
-                'payment_type' => 'online',
+                'payment_type' => 'cashless',
             ])
             ->assertSessionHasNoErrors();
 

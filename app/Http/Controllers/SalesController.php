@@ -28,7 +28,7 @@ use Inertia\Response;
 class SalesController extends Controller
 {
     /** Allowed payment types (mirrors the POS checkout). */
-    private const PAYMENT_TYPES = ['cash', 'online', 'others'];
+    private const PAYMENT_TYPES = ['cash', 'cashless', 'others'];
 
     public function index(Request $request): Response
     {

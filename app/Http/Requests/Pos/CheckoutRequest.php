@@ -44,7 +44,7 @@ class CheckoutRequest extends FormRequest
             ],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:999999'],
 
-            'payment_type' => ['required', Rule::in(['cash', 'online', 'others'])],
+            'payment_type' => ['required', Rule::in(['cash', 'cashless', 'others'])],
 
             'discount_type' => ['nullable', Rule::in(['amount', 'percentage'])],
             'discount' => [

@@ -15,7 +15,7 @@ return new class extends Migration
             // that never resets — the shape a BIR-registered CRM/POS serial takes
             // (unique, consecutive, non-resetting). See TransactionNumberGenerator.
             $table->string('transaction_number')->unique();
-            // Allowed: cash | online | others
+            // Allowed: cash | cashless | others
             $table->string('payment_type');
             $table->decimal('discount', 12, 2)->default(0);
             // Allowed: amount | percentage (null when no discount)

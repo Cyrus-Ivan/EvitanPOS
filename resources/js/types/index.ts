@@ -223,7 +223,7 @@ export interface ManagedUser {
 }
 
 // Point of Sale (Phase 8).
-export type PaymentType = 'cash' | 'online' | 'others';
+export type PaymentType = 'cash' | 'cashless' | 'others';
 export type DiscountType = 'amount' | 'percentage';
 
 // A sellable product tile in the POS grid / scan lookup. Cost is Owner-only and

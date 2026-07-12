@@ -46,7 +46,7 @@ class SaleReturnRequest extends FormRequest
             'refund_payment_type' => [
                 Rule::requiredIf(fn (): bool => ! $isDefect),
                 'nullable',
-                Rule::in(['cash', 'online', 'others']),
+                Rule::in(['cash', 'cashless', 'others']),
             ],
 
             // Every event names the lines and quantities it acts on.

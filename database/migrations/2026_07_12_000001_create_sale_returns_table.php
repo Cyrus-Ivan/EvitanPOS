@@ -23,7 +23,7 @@ return new class extends Migration
             // Allowed: return | defect
             $table->string('type');
             $table->text('reason')->nullable();
-            // How money was returned: cash | online | others (null for defect / no-cash).
+            // How money was returned: cash | cashless | others (null for defect / no-cash).
             $table->string('refund_payment_type')->nullable();
             // Convenience snapshot sum of line refund_amount — reports recompute
             // from the lines and never trust this stored total.

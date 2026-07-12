@@ -16,7 +16,7 @@ const ALL = 'all';
 // Human labels + badge tone per payment type.
 const PAYMENT: Record<PaymentType, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
     cash: { label: 'Cash', variant: 'default' },
-    online: { label: 'Online', variant: 'secondary' },
+    cashless: { label: 'Cashless', variant: 'secondary' },
     others: { label: 'Others', variant: 'outline' },
 };
 

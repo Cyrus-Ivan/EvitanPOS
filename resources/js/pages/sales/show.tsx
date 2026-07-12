@@ -12,7 +12,7 @@ import { useState } from 'react';
 
 const PAYMENT_LABEL: Record<PaymentType, string> = {
     cash: 'Cash',
-    online: 'Online',
+    cashless: 'Cashless',
     others: 'Others',
 };
 

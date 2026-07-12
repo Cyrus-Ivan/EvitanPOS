@@ -12,7 +12,7 @@ import { FormEventHandler, useEffect, useState } from 'react';
 
 const REFUND_METHODS: { value: PaymentType; label: string }[] = [
     { value: 'cash', label: 'Cash' },
-    { value: 'online', label: 'Online' },
+    { value: 'cashless', label: 'Cashless' },
     { value: 'others', label: 'Others' },
 ];
 

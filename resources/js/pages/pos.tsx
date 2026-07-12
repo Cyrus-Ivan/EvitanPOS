@@ -25,7 +25,7 @@ interface Filters {
 
 const PAYMENT_LABELS: Record<PaymentType, string> = {
     cash: 'Cash',
-    online: 'Online',
+    cashless: 'Cashless',
     others: 'Others',
 };
 

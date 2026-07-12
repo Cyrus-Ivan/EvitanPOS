@@ -19,7 +19,7 @@ class ReceiptContent
     /** Human labels for the stored payment types (mirrors the POS/sales views). */
     private const PAYMENT_LABELS = [
         'cash' => 'Cash',
-        'online' => 'Online',
+        'cashless' => 'Cashless',
         'others' => 'Others',
     ];
 

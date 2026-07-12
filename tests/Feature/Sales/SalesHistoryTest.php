@@ -32,7 +32,7 @@ class SalesHistoryTest extends TestCase
      *
      * @param  array<int, array{variant_id: string, quantity: int}>  $lines
      */
-    private function sell(User $cashier, array $lines, string $paymentType = 'online'): void
+    private function sell(User $cashier, array $lines, string $paymentType = 'cashless'): void
     {
         $this->actingAs($cashier)
             ->post(route('pos.checkout'), [
@@ -85,7 +85,7 @@ class SalesHistoryTest extends TestCase
         $cashier = User::factory()->cashier()->create();
 
         $this->sell($cashier, [['variant_id' => $variant->id, 'quantity' => 1]], 'cash');
-        $this->sell($cashier, [['variant_id' => $variant->id, 'quantity' => 1]], 'online');
+        $this->sell($cashier, [['variant_id' => $variant->id, 'quantity' => 1]], 'cashless');
 
         // Payment-type filter.
         $this->actingAs($cashier)
