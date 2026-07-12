@@ -8,6 +8,8 @@ use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Variant;
 use App\Support\Inventory\StockLedger;
+use App\Support\Printing\PrinterSettings;
+use App\Support\Printing\ReceiptPrinter;
 use App\Support\Sales\TransactionNumberGenerator;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +35,8 @@ class PosController extends Controller
     public function __construct(
         private readonly StockLedger $ledger,
         private readonly TransactionNumberGenerator $numbers,
+        private readonly PrinterSettings $printerSettings,
+        private readonly ReceiptPrinter $receiptPrinter,
     ) {}
 
     /**
@@ -116,14 +120,14 @@ class PosController extends Controller
             ])
             ->values();
 
-        $number = null;
+        $transaction = null;
 
         // The transaction_number carries a daily sequence derived from a count;
         // under concurrency two sales can collide, which the UNIQUE index turns
         // into a QueryException. Retry a few times with a fresh number.
         for ($attempt = 1; ; $attempt++) {
             try {
-                $number = DB::transaction(fn () => $this->persistSale($data, $lines, $request));
+                $transaction = DB::transaction(fn () => $this->persistSale($data, $lines, $request));
                 break;
             } catch (QueryException $e) {
                 if ($attempt < 3 && str_contains($e->getMessage(), 'transaction_number')) {
@@ -136,6 +140,30 @@ class PosController extends Controller
 
         // TODO(Phase 15): audit pos.sale.created
 
+        $number = $transaction->transaction_number;
+
+        // Auto-print (Phase 11). The sale is already committed above; printing is
+        // strictly best-effort and must never roll it back. A real device error
+        // only downgrades the toast (returning false = no printer configured,
+        // which is silent). The sale stays reprintable from Sales either way.
+        $printFailed = false;
+
+        if ($this->printerSettings->autoPrint()) {
+            try {
+                $this->receiptPrinter->print($transaction);
+            } catch (\Throwable $e) {
+                report($e);
+                $printFailed = true;
+            }
+        }
+
+        if ($printFailed) {
+            return back()->with('toast', [
+                'type' => 'warning',
+                'message' => "Sale {$number} completed, but the receipt failed to print. Reprint it from Sales.",
+            ]);
+        }
+
         return back()->with('toast', [
             'type' => 'success',
             'message' => "Sale {$number} completed.",
@@ -144,12 +172,12 @@ class PosController extends Controller
 
     /**
      * Create the transaction, its items and the stock deductions. Runs inside
-     * the caller's DB::transaction. Returns the generated transaction number.
+     * the caller's DB::transaction. Returns the persisted transaction.
      *
      * @param  array<string, mixed>  $data
      * @param  Collection<int, array{variant_id: string, quantity: int}>  $lines
      */
-    private function persistSale(array $data, Collection $lines, Request $request): string
+    private function persistSale(array $data, Collection $lines, Request $request): Transaction
     {
         // Reload fresh, active variants inside the transaction and key by id, so
         // prices/costs are the current authoritative values at sale time.
@@ -276,7 +304,7 @@ class PosController extends Controller
             }
         }
 
-        return $number;
+        return $transaction;
     }
 
     /**

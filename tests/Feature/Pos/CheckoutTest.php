@@ -8,7 +8,11 @@ use App\Models\TransactionItem;
 use App\Models\User;
 use App\Models\Variant;
 use App\Support\Inventory\StockLedger;
+use App\Support\Printing\PrinterException;
+use App\Support\Printing\PrinterSettings;
+use App\Support\Printing\ReceiptPrinter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -304,5 +308,72 @@ class CheckoutTest extends TestCase
         $this->assertSame(5, $item->quantity);
         $this->assertSame(1, InventoryLedger::where('type', 'sale')->count());
         $this->assertSame(5, $this->stockOf($variant));
+    }
+
+    public function test_a_receipt_print_failure_never_rolls_back_the_sale(): void
+    {
+        app(PrinterSettings::class)->update(['auto_print' => '1']);
+
+        // The printer blows up mid auto-print; the sale must still commit.
+        $printer = Mockery::mock(ReceiptPrinter::class);
+        $printer->shouldReceive('print')->once()->andThrow(new PrinterException('printer offline'));
+        $this->app->instance(ReceiptPrinter::class, $printer);
+
+        $variant = $this->sellable(price: 100, cost: 40, stock: 10);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 3]],
+                'payment_type' => 'cash',
+                'cash_received' => 500,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            // The operator is warned, but the sale is done.
+            ->assertSessionHas('toast.type', 'warning');
+
+        $this->assertSame('300.00', Transaction::sole()->total);
+        $this->assertSame(3, TransactionItem::sole()->quantity);
+        $this->assertSame(1, InventoryLedger::where('type', 'sale')->count());
+        $this->assertSame(7, $this->stockOf($variant));
+    }
+
+    public function test_auto_print_is_skipped_when_disabled(): void
+    {
+        app(PrinterSettings::class)->update(['auto_print' => '0']);
+
+        $printer = Mockery::mock(ReceiptPrinter::class);
+        $printer->shouldNotReceive('print');
+        $this->app->instance(ReceiptPrinter::class, $printer);
+
+        $variant = $this->sellable(price: 100, cost: 40, stock: 10);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
+                'payment_type' => 'cash',
+                'cash_received' => 500,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('toast.type', 'success');
+
+        $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_checkout_succeeds_cleanly_when_no_printer_is_configured(): void
+    {
+        // Auto-print on, but no device configured -> print is a silent no-op.
+        app(PrinterSettings::class)->update(['auto_print' => '1', 'receipt_device_path' => '']);
+
+        $variant = $this->sellable(price: 100, cost: 40, stock: 10);
+
+        $this->actingAs(User::factory()->cashier()->create())
+            ->post(route('pos.checkout'), [
+                'lines' => [['variant_id' => $variant->id, 'quantity' => 1]],
+                'payment_type' => 'cash',
+                'cash_received' => 500,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('toast.type', 'success');
     }
 }

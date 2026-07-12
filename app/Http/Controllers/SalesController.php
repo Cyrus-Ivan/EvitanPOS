@@ -7,7 +7,10 @@ use App\Models\SaleReturnItem;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
+use App\Support\Printing\PrinterException;
+use App\Support\Printing\ReceiptPrinter;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -159,6 +162,38 @@ class SalesController extends Controller
                 ])->all(),
             ],
             'canViewCost' => $canViewCost,
+        ]);
+    }
+
+    /**
+     * Reprint a sale's receipt (Phase 11). Cashier-level, like viewing the sale.
+     * The receipt is re-rendered from the immutable transaction and carries a
+     * "REPRINT" marker. Printing never mutates the sale, so any failure is only
+     * surfaced as a toast.
+     */
+    public function print(Transaction $transaction, ReceiptPrinter $printer): RedirectResponse
+    {
+        try {
+            $printed = $printer->print($transaction, isReprint: true);
+        } catch (PrinterException $e) {
+            report($e);
+
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => "Receipt {$transaction->transaction_number} failed to print: {$e->getMessage()}",
+            ]);
+        }
+
+        if (! $printed) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'No receipt printer is configured. Set one up in Business settings.',
+            ]);
+        }
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => "Receipt {$transaction->transaction_number} sent to the printer.",
         ]);
     }
 

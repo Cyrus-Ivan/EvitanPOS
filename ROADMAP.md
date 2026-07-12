@@ -374,7 +374,7 @@ Returns workflow complete.
 
 ---
 
-# Phase 11 — Receipt Printing
+# Phase 11 — Receipt Printing ✅
 
 ## Goal
 
@@ -399,6 +399,14 @@ Reprint
 **Milestone**
 
 Printing complete.
+
+**Status: done.** Driverless ESC/POS printing straight to the device (USB
+`/dev/usb/lp0`, Bluetooth `/dev/rfcomm0`) or a network socket — no CUPS/driver.
+58mm/80mm, auto-print (default on, toggleable), cash-drawer kick, and reprint
+(with a REPRINT banner). A print failure never rolls back the sale. Owner-only
+printer settings + test print live on the Business settings page. Design of
+record: `docs/receipt-printing-design.md`. Deferred (seams left open): OS-driver
+HTML printing and a libusb transport for driverless-USB-with-no-device-file.
 
 ---
 

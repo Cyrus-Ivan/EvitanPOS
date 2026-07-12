@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { usePermissions } from '@/hooks/use-permissions';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, PaymentType, SaleReturnEvent, SaleReturnType, TransactionDetail } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, RotateCcw, TriangleAlert } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Printer, RotateCcw, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 const PAYMENT_LABEL: Record<PaymentType, string> = {
@@ -70,6 +70,7 @@ export default function SalesShow({
 }) {
     const { hasRoleAtLeast } = usePermissions();
     const [dialogType, setDialogType] = useState<SaleReturnType | null>(null);
+    const [printing, setPrinting] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Sales', href: '/sales' },
@@ -170,6 +171,25 @@ export default function SalesShow({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={printing}
+                                onClick={() =>
+                                    router.post(
+                                        route('sales.print', transaction.id),
+                                        {},
+                                        {
+                                            preserveScroll: true,
+                                            onStart: () => setPrinting(true),
+                                            onFinish: () => setPrinting(false),
+                                        },
+                                    )
+                                }
+                            >
+                                <Printer className="size-4" />
+                                {printing ? 'Printing…' : 'Print receipt'}
+                            </Button>
                             <Button variant="outline" size="sm" disabled={!hasReturnable} onClick={() => setDialogType('return')}>
                                 <RotateCcw className="size-4" />
                                 Return
@@ -181,8 +201,6 @@ export default function SalesShow({
                                 </Button>
                             )}
                         </div>
-
-                        <p className="text-xs text-muted-foreground">Reprinting (Phase 11) will be available here.</p>
                     </CardContent>
                 </Card>
 

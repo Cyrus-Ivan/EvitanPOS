@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockHistoryController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\PrinterSettingsController;
 use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
@@ -33,6 +34,9 @@ Route::middleware(['auth'])->group(function () {
     // detail view is Owner-only, gated inside the controller.
     Route::get('sales', [SalesController::class, 'index'])->name('sales');
     Route::get('sales/{transaction}', [SalesController::class, 'show'])->name('sales.show');
+    // Receipt reprint (Phase 11). Cashier-level: anyone who can view a sale may
+    // reprint it. Printing never mutates the sale.
+    Route::post('sales/{transaction}/print', [SalesController::class, 'print'])->name('sales.print');
     // Returns / defects (Phase 10). Cashier-level for returns; the controller
     // elevates defect to Admin+ by the submitted type.
     Route::post('sales/{transaction}/returns', [SaleReturnController::class, 'store'])->name('sales.returns.store');
@@ -92,6 +96,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:owner')->group(function () {
         Route::get('business-settings', [BusinessSettingsController::class, 'edit'])->name('business-settings');      // Phase 4
         Route::patch('business-settings', [BusinessSettingsController::class, 'update'])->name('business-settings.update');
+        // Receipt-printer configuration (Phase 11). Surfaced on the same page.
+        Route::patch('printer-settings', [PrinterSettingsController::class, 'update'])->name('printer-settings.update');
+        Route::post('printer-settings/test', [PrinterSettingsController::class, 'test'])->name('printer-settings.test');
         // Database backup & restore (Phase 16).
         Route::get('backup', [BackupController::class, 'index'])->name('backup');
         Route::post('backup', [BackupController::class, 'store'])->name('backup.store');
