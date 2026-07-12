@@ -6,7 +6,9 @@ use App\Http\Requests\PrinterSettingsUpdateRequest;
 use App\Support\Printing\PrinterException;
 use App\Support\Printing\PrinterSettings;
 use App\Support\Printing\ReceiptPrinter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Native\Laravel\Facades\System;
 
 /**
  * Receipt-printer configuration (Phase 11). Owner-only via the route's
@@ -30,6 +32,33 @@ class PrinterSettingsController extends Controller
             'type' => 'success',
             'message' => 'Printer settings saved.',
         ]);
+    }
+
+    /**
+     * List the OS print queues so the owner can pick one for a `system`
+     * connection. Only works inside the NativePHP runtime (the Electron bridge
+     * backs {@see System::printers()}); under `artisan serve` there is no bridge,
+     * so this returns an empty list and the UI falls back to manual entry.
+     *
+     * @return JsonResponse<array{printers: list<array{name: string, label: string}>}>
+     */
+    public function printers(): JsonResponse
+    {
+        try {
+            $printers = collect(System::printers())
+                ->map(fn ($printer): array => [
+                    'name' => (string) $printer->name,
+                    'label' => (string) ($printer->displayName ?: $printer->name),
+                ])
+                ->filter(fn (array $p): bool => $p['name'] !== '')
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            report($e);
+            $printers = [];
+        }
+
+        return response()->json(['printers' => $printers]);
     }
 
     /**

@@ -21,6 +21,9 @@ class PrinterSettingsUpdateRequest extends FormRequest
         return [
             'receipt_paper_size' => ['required', Rule::in(PrinterSettings::PAPER_SIZES)],
             'receipt_connection' => ['required', Rule::in(PrinterSettings::CONNECTIONS)],
+            'receipt_printer_name' => ['nullable', 'string', 'max:255', Rule::requiredIf(
+                fn () => $this->input('receipt_connection') === PrinterSettings::CONNECTION_SYSTEM,
+            )],
             'receipt_device_path' => ['nullable', 'string', 'max:255', Rule::requiredIf(
                 fn () => in_array($this->input('receipt_connection'), [
                     PrinterSettings::CONNECTION_USB,

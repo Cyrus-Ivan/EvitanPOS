@@ -11,8 +11,8 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Printer } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { Printer, RefreshCw } from 'lucide-react';
+import { FormEventHandler, useCallback, useEffect, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Business Settings', href: '/business-settings' }];
 
@@ -29,12 +29,18 @@ interface BusinessSettingsData {
 interface PrinterSettingsData {
     receipt_paper_size: string;
     receipt_connection: string;
+    receipt_printer_name: string;
     receipt_device_path: string;
     receipt_network_host: string;
     receipt_network_port: string;
     auto_print: string;
     open_cash_drawer: string;
     [key: string]: string;
+}
+
+interface DetectedPrinter {
+    name: string;
+    label: string;
 }
 
 export default function BusinessSettings({ settings, printerSettings }: { settings: BusinessSettingsData; printerSettings: PrinterSettingsData }) {
@@ -48,12 +54,33 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
     const printer = useForm<PrinterSettingsData>({
         receipt_paper_size: printerSettings.receipt_paper_size,
         receipt_connection: printerSettings.receipt_connection,
+        receipt_printer_name: printerSettings.receipt_printer_name,
         receipt_device_path: printerSettings.receipt_device_path,
         receipt_network_host: printerSettings.receipt_network_host,
         receipt_network_port: printerSettings.receipt_network_port,
         auto_print: printerSettings.auto_print,
         open_cash_drawer: printerSettings.open_cash_drawer,
     });
+
+    const [detectedPrinters, setDetectedPrinters] = useState<DetectedPrinter[]>([]);
+    const [detecting, setDetecting] = useState(false);
+    const [detected, setDetected] = useState(false);
+
+    const detectPrinters = useCallback(async () => {
+        setDetecting(true);
+        try {
+            const response = await fetch(route('printer-settings.printers'), {
+                headers: { Accept: 'application/json' },
+            });
+            const body = (await response.json()) as { printers?: DetectedPrinter[] };
+            setDetectedPrinters(body.printers ?? []);
+        } catch {
+            setDetectedPrinters([]);
+        } finally {
+            setDetected(true);
+            setDetecting(false);
+        }
+    }, []);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -65,7 +92,15 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
         printer.patch(route('printer-settings.update'), { preserveScroll: true });
     };
 
-    const isNetwork = printer.data.receipt_connection === 'network';
+    const connection = printer.data.receipt_connection;
+
+    // Discover OS print queues the first time the "System printer" option is in
+    // play (only returns names inside the packaged app; empty under artisan serve).
+    useEffect(() => {
+        if (connection === 'system' && !detected && !detecting) {
+            void detectPrinters();
+        }
+    }, [connection, detected, detecting, detectPrinters]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -138,7 +173,7 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                 <section className="space-y-4">
                     <HeadingSmall
                         title="Receipt printing"
-                        description="Configure the thermal receipt printer. Prints ESC/POS directly to the device (no driver needed)."
+                        description="Configure the thermal receipt printer. Sends raw ESC/POS — via the OS print queue, a device file, or the network."
                     />
 
                     <form onSubmit={submitPrinter} className="max-w-xl space-y-6">
@@ -169,15 +204,65 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="usb">USB</SelectItem>
-                                    <SelectItem value="bluetooth">Bluetooth</SelectItem>
+                                    <SelectItem value="system">System printer (USB / Bluetooth via OS)</SelectItem>
+                                    <SelectItem value="usb">USB device file (Linux)</SelectItem>
+                                    <SelectItem value="bluetooth">Bluetooth serial (Linux / macOS)</SelectItem>
                                     <SelectItem value="network">Network (Wi-Fi / Ethernet)</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground">
+                                <strong>System printer</strong> is recommended on macOS &amp; Windows — install the printer in the OS, then pick it below.
+                            </p>
                             <InputError message={printer.errors.receipt_connection} />
                         </div>
 
-                        {isNetwork ? (
+                        {connection === 'system' ? (
+                            <div className="grid gap-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="receipt_printer_name">Printer</Label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 gap-1.5 text-xs"
+                                        onClick={() => void detectPrinters()}
+                                        disabled={detecting}
+                                    >
+                                        <RefreshCw className={detecting ? 'size-3.5 animate-spin' : 'size-3.5'} />
+                                        {detecting ? 'Detecting…' : 'Detect printers'}
+                                    </Button>
+                                </div>
+                                {detectedPrinters.length > 0 && (
+                                    <Select
+                                        value={detectedPrinters.some((p) => p.name === printer.data.receipt_printer_name) ? printer.data.receipt_printer_name : ''}
+                                        onValueChange={(value) => printer.setData('receipt_printer_name', value)}
+                                    >
+                                        <SelectTrigger id="receipt_printer_name" className="w-full">
+                                            <SelectValue placeholder="Choose a detected printer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {detectedPrinters.map((p) => (
+                                                <SelectItem key={p.name} value={p.name}>
+                                                    {p.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                <Input
+                                    value={printer.data.receipt_printer_name}
+                                    onChange={(e) => printer.setData('receipt_printer_name', e.target.value)}
+                                    placeholder="Printer queue name"
+                                    aria-label="Printer queue name"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    {detected && detectedPrinters.length === 0
+                                        ? 'No printers detected automatically — type the exact OS print-queue name.'
+                                        : 'Pick a detected printer, or type the exact OS print-queue name.'}
+                                </p>
+                                <InputError message={printer.errors.receipt_printer_name} />
+                            </div>
+                        ) : connection === 'network' ? (
                             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                                 <div className="grid gap-2">
                                     <Label htmlFor="receipt_network_host">Printer IP address</Label>
@@ -212,8 +297,9 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                     placeholder="/dev/usb/lp0"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    USB printers are usually <code>/dev/usb/lp0</code>; a paired Bluetooth printer is usually{' '}
-                                    <code>/dev/rfcomm0</code>. The app needs write access to the device.
+                                    Linux USB printers are usually <code>/dev/usb/lp0</code>; a paired Bluetooth printer is{' '}
+                                    <code>/dev/rfcomm0</code> (Linux) or <code>/dev/cu.*</code> (macOS). The app needs write access to
+                                    the device. On macOS/Windows, prefer <strong>System printer</strong> above.
                                 </p>
                                 <InputError message={printer.errors.receipt_device_path} />
                             </div>

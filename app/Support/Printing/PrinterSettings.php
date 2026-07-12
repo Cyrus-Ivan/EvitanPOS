@@ -28,7 +28,10 @@ class PrinterSettings
 
     public const CONNECTION_NETWORK = 'network';
 
+    public const CONNECTION_SYSTEM = 'system';
+
     public const CONNECTIONS = [
+        self::CONNECTION_SYSTEM,
         self::CONNECTION_USB,
         self::CONNECTION_BLUETOOTH,
         self::CONNECTION_NETWORK,
@@ -45,6 +48,7 @@ class PrinterSettings
     public const DEFAULTS = [
         'receipt_paper_size' => '58mm',
         'receipt_connection' => self::CONNECTION_USB,
+        'receipt_printer_name' => '',
         'receipt_device_path' => '/dev/usb/lp0',
         'receipt_network_host' => '',
         'receipt_network_port' => '9100',
@@ -106,6 +110,16 @@ class PrinterSettings
     }
 
     /**
+     * The OS print-queue name for a `system` connection (null when blank).
+     */
+    public function printerName(): ?string
+    {
+        $value = trim($this->get('receipt_printer_name'));
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
      * The device path for a USB/Bluetooth connection (null when blank).
      */
     public function devicePath(): ?string
@@ -144,6 +158,7 @@ class PrinterSettings
     public function isConfigured(): bool
     {
         return match ($this->connection()) {
+            self::CONNECTION_SYSTEM => $this->printerName() !== null,
             self::CONNECTION_NETWORK => $this->networkHost() !== null,
             default => $this->devicePath() !== null,
         };

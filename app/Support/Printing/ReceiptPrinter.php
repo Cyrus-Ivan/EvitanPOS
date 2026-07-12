@@ -5,6 +5,7 @@ namespace App\Support\Printing;
 use App\Models\Transaction;
 use App\Support\Printing\Connectors\NetworkConnector;
 use App\Support\Printing\Connectors\RawDeviceConnector;
+use App\Support\Printing\Connectors\SystemPrinterConnector;
 use App\Support\Printing\Contracts\PrinterConnector;
 use App\Support\Settings\BusinessSettings;
 
@@ -73,6 +74,9 @@ class ReceiptPrinter
     private function connector(): PrinterConnector
     {
         return match ($this->settings->connection()) {
+            PrinterSettings::CONNECTION_SYSTEM => new SystemPrinterConnector(
+                $this->settings->printerName() ?? '',
+            ),
             PrinterSettings::CONNECTION_NETWORK => new NetworkConnector(
                 $this->settings->networkHost() ?? '',
                 $this->settings->networkPort(),

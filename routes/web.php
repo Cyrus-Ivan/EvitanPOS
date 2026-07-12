@@ -99,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
         // Receipt-printer configuration (Phase 11). Surfaced on the same page.
         Route::patch('printer-settings', [PrinterSettingsController::class, 'update'])->name('printer-settings.update');
         Route::post('printer-settings/test', [PrinterSettingsController::class, 'test'])->name('printer-settings.test');
+        Route::get('printer-settings/printers', [PrinterSettingsController::class, 'printers'])->name('printer-settings.printers');
         // Database backup & restore (Phase 16).
         Route::get('backup', [BackupController::class, 'index'])->name('backup');
         Route::post('backup', [BackupController::class, 'store'])->name('backup.store');

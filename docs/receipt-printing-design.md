@@ -6,46 +6,60 @@ printing behaviour, this document wins.
 
 ## Target & scope
 
-Evitan POS runs on **Linux** (single-store desktop app). The supported printer is
-a **driverless ESC/POS thermal printer** connected by **USB or Bluetooth** — the
-kind with no OS print queue. There is one printing path:
+Evitan POS runs on **Linux, macOS and Windows** (single-store desktop app). The
+supported printer is an **ESC/POS thermal printer** connected by **USB, Bluetooth
+or the network**. In every case the app generates the *same* ESC/POS byte stream
+in PHP; only the transport that carries those bytes to the printer differs.
 
-> Generate ESC/POS bytes in PHP and write them straight to the device.
-
-NativePHP runs a real host PHP process, so PHP opens the device itself — no CUPS
-driver, no HTML/`System::print`, and no native Node modules. Because it is pure
-PHP, printing runs and is testable under plain `php artisan serve` **and** the
+NativePHP runs a real host PHP process, so PHP delivers the bytes itself. There is
+still **no HTML/`System::print`** path (that route rasterises through a driver and
+cannot carry raw ESC/POS) and **no native Node modules**. Everything is pure PHP
+plus, on the OS-queue path, a shell-out to the platform's built-in raw-print tool —
+so printing runs and is testable under plain `php artisan serve` **and** the
 packaged desktop app.
 
 ### Transports (`app/Support/Printing/Connectors/`)
 
-| Connection  | How it reaches the printer | Typical device |
+| Connection  | How it reaches the printer | Typical target |
 |-------------|----------------------------|----------------|
-| `usb`       | write bytes to a device file (`RawDeviceConnector`) | `/dev/usb/lp0` (kernel `usblp`) |
-| `bluetooth` | write bytes to a device file (`RawDeviceConnector`) | `/dev/rfcomm0` (after `rfcomm bind`) |
+| `system`    | raw ESC/POS through the **OS print queue** (`SystemPrinterConnector`) | a printer installed in the OS, chosen by name |
+| `usb`       | write bytes to a device file (`RawDeviceConnector`) | Linux `/dev/usb/lp0` (kernel `usblp`) |
+| `bluetooth` | write bytes to a device file (`RawDeviceConnector`) | Linux `/dev/rfcomm0` (after `rfcomm bind`), macOS `/dev/cu.*` |
 | `network`   | TCP socket (`NetworkConnector`) | `ip:9100` (RAW/JetDirect) |
 
-All three carry the **same** ESC/POS byte stream. USB and Bluetooth differ only in
-the device path the operator configures.
+All carry the **same** ESC/POS byte stream.
+
+`system` is the **recommended transport on macOS and Windows**, where a USB or
+Bluetooth thermal printer is enrolled as an OS print queue rather than exposed as a
+device file. `SystemPrinterConnector` picks the platform's raw-passthrough tool:
+
+- **macOS / Linux (CUPS):** `lp -d "<queue>" -o raw`, bytes on stdin (`-o raw`
+  disables driver filtering so the ESC/POS passes through untouched).
+- **Windows (spooler):** a bundled PowerShell helper
+  (`resources/printing/windows-raw-print.ps1`) that P/Invokes the winspool RAW API
+  (`OpenPrinter` → `StartDocPrinter` with `pDatatype="RAW"` → `WritePrinter`).
+
+The queue name is what `Native\Laravel\Facades\System::printers()` reports, so the
+owner picks it from a detected list in Business settings (falling back to typing the
+exact name when discovery is unavailable, e.g. under `artisan serve`).
 
 ### Deferred (not built; seam left open)
 
-The `PrinterConnector` interface is the extension point for:
+The `PrinterConnector` interface remains the extension point for:
 
-- **OS-driver / CUPS HTML printing** (`Native\Laravel\Facades\System::print`) for
-  driver-backed printers on Linux/Windows/mac.
-- **libusb/WinUSB** for a raw-USB printer that exposes **no** device file at all
-  (e.g. a driverless USB printer on Windows). This needs a native module.
-
-If a future customer has such a printer, add a connector; nothing else changes.
+- **libusb/WinUSB** for a raw-USB printer that exposes **no** device file **and** is
+  not enrolled as an OS print queue. This needs a native module. If a future customer
+  has such a printer, add a connector; nothing else changes.
 
 ## Components (`app/Support/Printing/`)
 
 - `PrinterSettings` — key/value settings (mirrors `BusinessSettings`; same
   `settings` table, no migration). Keys + defaults: `receipt_paper_size` (`58mm`),
-  `receipt_connection` (`usb`), `receipt_device_path` (`/dev/usb/lp0`),
+  `receipt_connection` (`usb`), `receipt_printer_name` (`''`, the OS queue name for
+  the `system` connection), `receipt_device_path` (`/dev/usb/lp0`),
   `receipt_network_host` (`''`), `receipt_network_port` (`9100`), `auto_print`
-  (`1`), `open_cash_drawer` (`0`). Booleans stored as `'1'`/`'0'`.
+  (`1`), `open_cash_drawer` (`0`). Booleans stored as `'1'`/`'0'`. `isConfigured()`
+  requires a printer name for `system`, a host for `network`, else a device path.
 - `ReceiptContent` — builds the plain receipt data array from a `Transaction` +
   `BusinessSettings` + `PrinterSettings`. **Single source of truth for what a
   receipt says.** Derives subtotal from the line totals (not stored) and the
@@ -84,6 +98,21 @@ The sale is always recorded and always reprintable from Sales.
 The drawer is kicked over ESC/POS (`ESC p 0 25 250`) when `open_cash_drawer` is on
 and the connection is a real ESC/POS transport — i.e. the drawer must be wired to
 (or chained through) the receipt printer. There is no independent drawer device.
+
+## macOS & Windows setup (the `system` transport)
+
+The bytes still originate in PHP; the OS spooler only carries them, in raw mode.
+
+1. **Install the printer in the OS.** Add the thermal printer in *System Settings →
+   Printers* (macOS) or *Settings → Bluetooth & devices → Printers* (Windows) so it
+   becomes a named print queue. A "Generic / Raw" or vendor driver both work — the
+   bytes bypass driver rendering.
+2. **Configure it in the app.** Business settings → Receipt printing → connection
+   **System printer** → **Detect printers** and pick it (or type the exact queue
+   name) → **Save** → **Test print**.
+3. **macOS** uses CUPS `lp -o raw`; **Windows** uses the bundled winspool RAW helper
+   (`resources/printing/windows-raw-print.ps1` — it must ship in the NativePHP build).
+   No group membership or udev rule is needed on either OS.
 
 ## Linux setup prerequisites (deployment)
 

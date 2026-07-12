@@ -11,6 +11,8 @@ use App\Support\Printing\PrinterSettings;
 use App\Support\Printing\ReceiptPrinter;
 use App\Support\Settings\BusinessSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 class ReceiptPrinterTest extends TestCase
@@ -134,6 +136,45 @@ class ReceiptPrinterTest extends TestCase
             'receipt_connection' => 'network',
             'receipt_network_host' => '127.0.0.1',
             'receipt_network_port' => '9', // discard port: nothing listening
+        ]);
+        $transaction = $this->makeSale();
+
+        $this->expectException(PrinterException::class);
+        app(ReceiptPrinter::class)->print($transaction);
+    }
+
+    public function test_a_system_printer_is_not_configured_without_a_name(): void
+    {
+        app(PrinterSettings::class)->update([
+            'receipt_connection' => 'system',
+            'receipt_printer_name' => '',
+        ]);
+        $transaction = $this->makeSale();
+
+        $this->assertFalse(app(ReceiptPrinter::class)->print($transaction));
+    }
+
+    public function test_a_system_printer_sends_bytes_to_the_os_queue(): void
+    {
+        Process::fake();
+        app(PrinterSettings::class)->update([
+            'receipt_connection' => 'system',
+            'receipt_printer_name' => 'Corner-Store-Printer',
+        ]);
+        $transaction = $this->makeSale();
+
+        $this->assertTrue(app(ReceiptPrinter::class)->print($transaction));
+
+        Process::assertRan(fn (PendingProcess $process): bool => is_array($process->command)
+            && in_array('Corner-Store-Printer', $process->command, true));
+    }
+
+    public function test_a_failing_system_printer_surfaces_a_printer_exception(): void
+    {
+        Process::fake(['*' => Process::result(exitCode: 1, errorOutput: 'offline')]);
+        app(PrinterSettings::class)->update([
+            'receipt_connection' => 'system',
+            'receipt_printer_name' => 'Corner-Store-Printer',
         ]);
         $transaction = $this->makeSale();
 

@@ -19,6 +19,7 @@ class PrinterSettingsTest extends TestCase
         return array_merge([
             'receipt_paper_size' => '80mm',
             'receipt_connection' => 'usb',
+            'receipt_printer_name' => '',
             'receipt_device_path' => '/dev/usb/lp0',
             'receipt_network_host' => '',
             'receipt_network_port' => 9100,
@@ -86,5 +87,31 @@ class PrinterSettingsTest extends TestCase
                 'receipt_device_path' => '',
             ]))
             ->assertSessionHasErrors('receipt_device_path');
+    }
+
+    public function test_a_system_printer_requires_a_printer_name(): void
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('printer-settings.update'), $this->payload([
+                'receipt_connection' => 'system',
+                'receipt_printer_name' => '',
+            ]))
+            ->assertSessionHasErrors('receipt_printer_name');
+    }
+
+    public function test_the_owner_can_save_a_system_printer(): void
+    {
+        $this->actingAs(User::factory()->owner()->create())
+            ->patch(route('printer-settings.update'), $this->payload([
+                'receipt_connection' => 'system',
+                'receipt_printer_name' => 'EPSON TM-T20',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $settings = app(PrinterSettings::class);
+        $this->assertSame('system', $settings->connection());
+        $this->assertSame('EPSON TM-T20', $settings->printerName());
+        $this->assertTrue($settings->isConfigured());
     }
 }
