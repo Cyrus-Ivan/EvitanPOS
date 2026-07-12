@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PrinterSettingsUpdateRequest;
+use App\Support\Audit\AuditRecorder;
+use App\Support\Audit\SettingsDiff;
 use App\Support\Printing\PrinterException;
 use App\Support\Printing\PrinterSettings;
 use App\Support\Printing\ReceiptPrinter;
@@ -22,11 +24,20 @@ class PrinterSettingsController extends Controller
     /**
      * Persist the receipt-printer settings.
      */
-    public function update(PrinterSettingsUpdateRequest $request): RedirectResponse
+    public function update(PrinterSettingsUpdateRequest $request, AuditRecorder $audit): RedirectResponse
     {
+        $before = $this->settings->all();
         $this->settings->update($request->settingsPayload());
+        $diff = SettingsDiff::changed($before, $this->settings->all());
 
-        // TODO(Phase 15): audit settings.updated
+        if ($diff !== null) {
+            $audit->record(
+                action: 'settings.updated',
+                description: 'Updated printer settings: '.implode(', ', array_keys($diff['new'])).'.',
+                old: $diff['old'],
+                new: $diff['new'],
+            );
+        }
 
         return back()->with('toast', [
             'type' => 'success',

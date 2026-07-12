@@ -6,13 +6,17 @@ use App\Exceptions\NegativeInventoryException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\StockAdjustmentRequest;
 use App\Models\Variant;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Inventory\StockLedger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 
 class StockAdjustmentController extends Controller
 {
-    public function __construct(private readonly StockLedger $ledger) {}
+    public function __construct(
+        private readonly StockLedger $ledger,
+        private readonly AuditRecorder $audit,
+    ) {}
 
     /**
      * Record a manual stock adjustment as a single ledger entry. Both input
@@ -50,7 +54,16 @@ class StockAdjustmentController extends Controller
             ]);
         }
 
-        // TODO(Phase 15): audit inventory.stock.adjusted
+        $this->audit->record(
+            action: 'inventory.stock.adjusted',
+            auditable: $variant,
+            description: sprintf('Adjusted stock for variant by %+d.', $delta),
+            new: [
+                'delta' => $delta,
+                'mode' => $data['mode'],
+                'notes' => $data['notes'] ?? null,
+            ],
+        );
 
         return back()->with('toast', [
             'type' => 'success',

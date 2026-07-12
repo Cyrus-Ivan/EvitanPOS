@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BusinessSettingsUpdateRequest;
+use App\Support\Audit\AuditRecorder;
+use App\Support\Audit\SettingsDiff;
 use App\Support\Printing\PrinterSettings;
 use App\Support\Settings\BusinessSettings;
 use Illuminate\Http\RedirectResponse;
@@ -30,11 +32,20 @@ class BusinessSettingsController extends Controller
     /**
      * Update the business identity settings.
      */
-    public function update(BusinessSettingsUpdateRequest $request): RedirectResponse
+    public function update(BusinessSettingsUpdateRequest $request, AuditRecorder $audit): RedirectResponse
     {
+        $before = $this->settings->all();
         $this->settings->update($request->validated());
+        $diff = SettingsDiff::changed($before, $this->settings->all());
 
-        // TODO(Phase 15): audit settings.updated
+        if ($diff !== null) {
+            $audit->record(
+                action: 'settings.updated',
+                description: 'Updated business settings: '.implode(', ', array_keys($diff['new'])).'.',
+                old: $diff['old'],
+                new: $diff['new'],
+            );
+        }
 
         return back()->with('toast', [
             'type' => 'success',

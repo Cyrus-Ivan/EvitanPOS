@@ -7,6 +7,7 @@ use App\Models\SaleReturnItem;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Inventory\StockLedger;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
@@ -30,6 +31,7 @@ class ProcessSaleReturn
     public function __construct(
         private readonly StockLedger $ledger,
         private readonly SaleReturnNumberGenerator $numbers,
+        private readonly AuditRecorder $audit,
     ) {}
 
     /**
@@ -176,7 +178,22 @@ class ProcessSaleReturn
             );
         }
 
-        // TODO(Phase 15): audit sale.{$type}.created
+        $this->audit->record(
+            action: "sale.{$type}.created",
+            auditable: $saleReturn,
+            description: sprintf(
+                'Processed %s %s against sale %s.',
+                $type,
+                $saleReturn->return_number,
+                $transaction->transaction_number,
+            ),
+            new: [
+                'type' => $type,
+                'return_number' => $saleReturn->return_number,
+                'total_refund' => $saleReturn->total_refund,
+            ],
+            actor: $performedBy,
+        );
 
         return $saleReturn;
     }

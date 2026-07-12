@@ -7,6 +7,7 @@ use App\Http\Requests\Pos\CheckoutRequest;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Variant;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Inventory\StockLedger;
 use App\Support\Printing\PrinterSettings;
 use App\Support\Printing\ReceiptPrinter;
@@ -37,6 +38,7 @@ class PosController extends Controller
         private readonly TransactionNumberGenerator $numbers,
         private readonly PrinterSettings $printerSettings,
         private readonly ReceiptPrinter $receiptPrinter,
+        private readonly AuditRecorder $audit,
     ) {}
 
     /**
@@ -138,7 +140,15 @@ class PosController extends Controller
             }
         }
 
-        // TODO(Phase 15): audit pos.sale.created
+        $this->audit->record(
+            action: 'pos.sale.created',
+            auditable: $transaction,
+            description: "Recorded sale {$transaction->transaction_number}.",
+            new: [
+                'transaction_number' => $transaction->transaction_number,
+                'total' => $transaction->total,
+            ],
+        );
 
         $number = $transaction->transaction_number;
 

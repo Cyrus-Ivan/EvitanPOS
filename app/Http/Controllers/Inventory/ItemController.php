@@ -7,6 +7,8 @@ use App\Http\Requests\Inventory\StoreItemRequest;
 use App\Http\Requests\Inventory\UpdateItemRequest;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Variant;
+use App\Support\Audit\AuditRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,11 +71,11 @@ class ItemController extends Controller
         ]);
     }
 
-    public function store(StoreItemRequest $request): RedirectResponse
+    public function store(StoreItemRequest $request, AuditRecorder $audit): RedirectResponse
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data) {
+        $item = DB::transaction(function () use ($data) {
             $item = Item::create([
                 'name' => $data['name'],
                 'unit' => $data['unit'],
@@ -84,9 +86,16 @@ class ItemController extends Controller
             foreach ($data['variants'] as $variant) {
                 $item->variants()->create($this->variantAttributes($variant));
             }
+
+            return $item;
         });
 
-        // TODO(Phase 15): audit inventory.item.created
+        $audit->record(
+            action: 'inventory.item.created',
+            auditable: $item,
+            description: "Created item \"{$item->name}\".",
+            new: $this->itemSnapshot($item->load('variants')),
+        );
 
         return to_route('inventory')->with('toast', [
             'type' => 'success',
@@ -107,9 +116,11 @@ class ItemController extends Controller
         ]);
     }
 
-    public function update(UpdateItemRequest $request, Item $item): RedirectResponse
+    public function update(UpdateItemRequest $request, Item $item, AuditRecorder $audit): RedirectResponse
     {
         $data = $request->validated();
+
+        $before = $this->itemSnapshot($item->load('variants'));
 
         DB::transaction(function () use ($data, $item) {
             // `name` is deliberately absent: item names are immutable after
@@ -150,7 +161,13 @@ class ItemController extends Controller
             }
         });
 
-        // TODO(Phase 15): audit inventory.item.updated
+        $audit->record(
+            action: 'inventory.item.updated',
+            auditable: $item,
+            description: "Updated item \"{$item->name}\".",
+            old: $before,
+            new: $this->itemSnapshot($item->load(['variants' => fn ($query) => $query->active()])),
+        );
 
         return to_route('inventory')->with('toast', [
             'type' => 'success',
@@ -158,11 +175,15 @@ class ItemController extends Controller
         ]);
     }
 
-    public function archive(Item $item): RedirectResponse
+    public function archive(Item $item, AuditRecorder $audit): RedirectResponse
     {
         $item->update(['archived_at' => now()]);
 
-        // TODO(Phase 15): audit inventory.item.archived
+        $audit->record(
+            action: 'inventory.item.archived',
+            auditable: $item,
+            description: "Archived item \"{$item->name}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -170,11 +191,15 @@ class ItemController extends Controller
         ]);
     }
 
-    public function restore(Item $item): RedirectResponse
+    public function restore(Item $item, AuditRecorder $audit): RedirectResponse
     {
         $item->update(['archived_at' => null]);
 
-        // TODO(Phase 15): audit inventory.item.restored
+        $audit->record(
+            action: 'inventory.item.restored',
+            auditable: $item,
+            description: "Restored item \"{$item->name}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -210,6 +235,33 @@ class ItemController extends Controller
         }
 
         return $attributes;
+    }
+
+    /**
+     * A compact before/after snapshot of an item and its variants for the audit
+     * trail. `cost` is included so the Owner sees price/cost history; the read
+     * layer redacts it for non-Owner viewers. Assumes variants are loaded.
+     *
+     * @return array<string, mixed>
+     */
+    private function itemSnapshot(Item $item): array
+    {
+        return [
+            'name' => $item->name,
+            'unit' => $item->unit,
+            'category_id' => $item->category_id,
+            'description' => $item->description,
+            'variants' => $item->variants
+                ->map(fn (Variant $variant) => [
+                    'id' => $variant->id,
+                    'name' => $variant->name,
+                    'sku' => $variant->sku,
+                    'selling_price' => $variant->selling_price,
+                    'cost' => $variant->cost,
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

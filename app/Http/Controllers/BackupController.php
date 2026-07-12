@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Backup\DatabaseBackupManager;
 use App\Support\Backup\DirectoryPicker;
 use Illuminate\Http\RedirectResponse;
@@ -35,20 +36,24 @@ class BackupController extends Controller
         ]);
     }
 
-    public function store(DatabaseBackupManager $manager): RedirectResponse
+    public function store(DatabaseBackupManager $manager, AuditRecorder $audit): RedirectResponse
     {
         try {
-            $manager->create();
+            $filename = $manager->create();
         } catch (RuntimeException $e) {
             return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
         }
 
-        // TODO(Phase 15): audit backup.created
+        $audit->record(
+            action: 'backup.created',
+            description: "Created database backup \"{$filename}\".",
+            new: ['filename' => $filename],
+        );
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Backup created.']);
     }
 
-    public function restore(Request $request, DatabaseBackupManager $manager): RedirectResponse
+    public function restore(Request $request, DatabaseBackupManager $manager, AuditRecorder $audit): RedirectResponse
     {
         $validated = $request->validate([
             'filename' => ['required', 'string'],
@@ -60,7 +65,11 @@ class BackupController extends Controller
             return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
         }
 
-        // TODO(Phase 15): audit backup.restored
+        $audit->record(
+            action: 'backup.restored',
+            description: "Restored database from backup \"{$validated['filename']}\".",
+            new: ['filename' => $validated['filename']],
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -73,7 +82,7 @@ class BackupController extends Controller
      * folder via a native dialog, and a timestamped copy is written there. The
      * chosen folder is remembered as the default for next time.
      */
-    public function exportExternal(DirectoryPicker $picker, DatabaseBackupManager $manager): RedirectResponse
+    public function exportExternal(DirectoryPicker $picker, DatabaseBackupManager $manager, AuditRecorder $audit): RedirectResponse
     {
         try {
             $directory = $picker->pickDirectory($this->lastExternalDirectory());
@@ -82,13 +91,17 @@ class BackupController extends Controller
                 return back()->with('toast', ['type' => 'info', 'message' => 'Backup cancelled.']);
             }
 
-            $manager->export($directory);
+            $destination = $manager->export($directory);
             $this->rememberExternalDirectory($directory);
         } catch (RuntimeException $e) {
             return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
         }
 
-        // TODO(Phase 15): audit backup.exported
+        $audit->record(
+            action: 'backup.exported',
+            description: "Exported database backup to \"{$destination}\".",
+            new: ['destination' => $destination],
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -101,7 +114,7 @@ class BackupController extends Controller
      * external drive) chosen via a native file dialog. A safety backup of the
      * current database is taken automatically first.
      */
-    public function restoreExternal(DirectoryPicker $picker, DatabaseBackupManager $manager): RedirectResponse
+    public function restoreExternal(DirectoryPicker $picker, DatabaseBackupManager $manager, AuditRecorder $audit): RedirectResponse
     {
         try {
             $file = $picker->pickFile($this->lastExternalDirectory());
@@ -115,7 +128,11 @@ class BackupController extends Controller
             return back()->with('toast', ['type' => 'error', 'message' => $e->getMessage()]);
         }
 
-        // TODO(Phase 15): audit backup.restored
+        $audit->record(
+            action: 'backup.restored',
+            description: "Restored database from external file \"{$file}\".",
+            new: ['source' => $file],
+        );
 
         return back()->with('toast', [
             'type' => 'success',

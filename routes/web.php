@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Inventory\CategoryController;
@@ -56,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
     // Admin-level: Admins and the Owner.
     Route::middleware('role:admin')->group(function () {
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');     // Phase 12
-        Route::inertia('audit-logs', 'audit-logs')->name('audit-logs');                // Phase 15
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs'); // Phase 15
 
         // User management (Phase 13). Which roles an actor may create/assign and
         // which users they may touch is enforced per-action by UserPolicy.

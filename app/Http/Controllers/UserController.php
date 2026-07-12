@@ -6,6 +6,7 @@ use App\Http\Requests\Users\ResetUserPasswordRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRoleRequest;
 use App\Models\User;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Auth\SessionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,18 +61,23 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(StoreUserRequest $request): RedirectResponse
+    public function store(StoreUserRequest $request, AuditRecorder $audit): RedirectResponse
     {
         $data = $request->validated();
 
-        User::create([
+        $user = User::create([
             'name' => $data['name'],
             'username' => $data['username'],
             'role' => $data['role'],
             'password' => Hash::make($data['password']),
         ]);
 
-        // TODO(Phase 15): audit user.created
+        $audit->record(
+            action: 'user.created',
+            auditable: $user,
+            description: "Created {$user->role->value} account \"{$user->username}\".",
+            new: ['name' => $user->name, 'username' => $user->username, 'role' => $user->role->value],
+        );
 
         return to_route('users')->with('toast', [
             'type' => 'success',
@@ -82,13 +88,20 @@ class UserController extends Controller
     /**
      * Change an employee's role. The name is immutable, so only the role moves.
      */
-    public function updateRole(UpdateUserRoleRequest $request, User $user): RedirectResponse
+    public function updateRole(UpdateUserRoleRequest $request, User $user, AuditRecorder $audit): RedirectResponse
     {
         Gate::authorize('manage', $user);
 
+        $oldRole = $user->role->value;
         $user->update(['role' => $request->validated()['role']]);
 
-        // TODO(Phase 15): audit user.role_changed
+        $audit->record(
+            action: 'user.role_changed',
+            auditable: $user,
+            description: "Changed role of \"{$user->username}\" from {$oldRole} to {$user->role->value}.",
+            old: ['role' => $oldRole],
+            new: ['role' => $user->role->value],
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -100,7 +113,7 @@ class UserController extends Controller
      * Administratively reset an employee's password, then force-log-out their
      * active session so they must sign in again with the new credentials.
      */
-    public function resetPassword(ResetUserPasswordRequest $request, User $user, SessionManager $sessions): RedirectResponse
+    public function resetPassword(ResetUserPasswordRequest $request, User $user, SessionManager $sessions, AuditRecorder $audit): RedirectResponse
     {
         Gate::authorize('manage', $user);
 
@@ -108,7 +121,12 @@ class UserController extends Controller
 
         $sessions->forceLogout($user, 'Password reset by an administrator.');
 
-        // TODO(Phase 15): audit user.password_reset
+        // The new password is never captured — only the fact of the reset.
+        $audit->record(
+            action: 'user.password_reset',
+            auditable: $user,
+            description: "Reset password for \"{$user->username}\" and signed out their session.",
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -120,13 +138,17 @@ class UserController extends Controller
      * Archive (soft delete) an employee. The Owner is protected by both the
      * policy (nothing outranks it) and the model-layer delete guard.
      */
-    public function archive(User $user): RedirectResponse
+    public function archive(User $user, AuditRecorder $audit): RedirectResponse
     {
         Gate::authorize('manage', $user);
 
         $user->delete();
 
-        // TODO(Phase 15): audit user.archived
+        $audit->record(
+            action: 'user.archived',
+            auditable: $user,
+            description: "Archived user \"{$user->username}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -137,13 +159,17 @@ class UserController extends Controller
     /**
      * Restore an archived employee. Bound with trashed models via the route.
      */
-    public function restore(User $user): RedirectResponse
+    public function restore(User $user, AuditRecorder $audit): RedirectResponse
     {
         Gate::authorize('manage', $user);
 
         $user->restore();
 
-        // TODO(Phase 15): audit user.restored
+        $audit->record(
+            action: 'user.restored',
+            auditable: $user,
+            description: "Restored user \"{$user->username}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',

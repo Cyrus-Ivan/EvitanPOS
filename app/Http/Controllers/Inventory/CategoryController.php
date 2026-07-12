@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\StoreCategoryRequest;
 use App\Http\Requests\Inventory\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Support\Audit\AuditRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -32,11 +33,16 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(StoreCategoryRequest $request): RedirectResponse
+    public function store(StoreCategoryRequest $request, AuditRecorder $audit): RedirectResponse
     {
-        Category::create($request->validated());
+        $category = Category::create($request->validated());
 
-        // TODO(Phase 15): audit inventory.category.created
+        $audit->record(
+            action: 'inventory.category.created',
+            auditable: $category,
+            description: "Created category \"{$category->name}\".",
+            new: ['name' => $category->name],
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -44,11 +50,18 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
+    public function update(UpdateCategoryRequest $request, Category $category, AuditRecorder $audit): RedirectResponse
     {
+        $oldName = $category->name;
         $category->update($request->validated());
 
-        // TODO(Phase 15): audit inventory.category.updated
+        $audit->record(
+            action: 'inventory.category.updated',
+            auditable: $category,
+            description: "Renamed category \"{$oldName}\" to \"{$category->name}\".",
+            old: ['name' => $oldName],
+            new: ['name' => $category->name],
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -56,11 +69,15 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function archive(Category $category): RedirectResponse
+    public function archive(Category $category, AuditRecorder $audit): RedirectResponse
     {
         $category->update(['archived_at' => now()]);
 
-        // TODO(Phase 15): audit inventory.category.archived
+        $audit->record(
+            action: 'inventory.category.archived',
+            auditable: $category,
+            description: "Archived category \"{$category->name}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',
@@ -68,11 +85,15 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function restore(Category $category): RedirectResponse
+    public function restore(Category $category, AuditRecorder $audit): RedirectResponse
     {
         $category->update(['archived_at' => null]);
 
-        // TODO(Phase 15): audit inventory.category.restored
+        $audit->record(
+            action: 'inventory.category.restored',
+            auditable: $category,
+            description: "Restored category \"{$category->name}\".",
+        );
 
         return back()->with('toast', [
             'type' => 'success',

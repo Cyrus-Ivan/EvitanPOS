@@ -97,6 +97,20 @@ export interface LoginHistoryEntry {
     user: Pick<User, 'id' | 'name' | 'username'> | null;
 }
 
+// A row from the immutable audit log (Phase 15, display only). Cost-bearing keys
+// in old_values/new_values are stripped server-side for non-Owner viewers.
+export interface AuditLogEntry {
+    id: string;
+    action: string;
+    description: string | null;
+    auditable_type: string | null;
+    auditable_id: string | null;
+    old_values: Record<string, unknown> | null;
+    new_values: Record<string, unknown> | null;
+    created_at: string;
+    user: Pick<User, 'id' | 'name' | 'username'> | null;
+}
+
 // A row from the append-only inventory ledger (Phase 6, stock history view).
 export interface StockLedgerEntry {
     id: string;

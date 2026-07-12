@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Inventory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\InventoryImportRequest;
 use App\Models\ImportHistory;
+use App\Support\Audit\AuditRecorder;
 use App\Support\Inventory\CsvInventoryImporter;
 use App\Support\Inventory\InventoryCsvSchema;
 use Illuminate\Http\RedirectResponse;
@@ -45,7 +46,7 @@ class InventoryImportController extends Controller
         ]);
     }
 
-    public function store(InventoryImportRequest $request, CsvInventoryImporter $importer): RedirectResponse
+    public function store(InventoryImportRequest $request, CsvInventoryImporter $importer, AuditRecorder $audit): RedirectResponse
     {
         $file = $request->file('file');
 
@@ -56,7 +57,25 @@ class InventoryImportController extends Controller
             canViewCost: Gate::allows('view-item-cost'),
         );
 
-        // TODO(Phase 15): audit inventory.imported
+        $audit->record(
+            action: 'inventory.imported',
+            auditable: $result,
+            description: sprintf(
+                'CSV import "%s" %s: %d of %d row(s) applied.',
+                $result->filename ?? 'upload',
+                $result->status,
+                $result->success_count,
+                $result->total_rows,
+            ),
+            new: [
+                'filename' => $result->filename,
+                'mode' => $result->mode,
+                'status' => $result->status,
+                'total_rows' => $result->total_rows,
+                'success_count' => $result->success_count,
+                'error_count' => $result->error_count,
+            ],
+        );
 
         if ($result->status === 'success') {
             return back()->with('toast', [
