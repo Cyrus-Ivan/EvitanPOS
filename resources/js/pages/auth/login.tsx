@@ -1,6 +1,6 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useEffect } from 'react';
 
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,14 @@ export default function Login({ status }: LoginProps) {
         username: '',
         password: '',
     });
+
+    // Reaching the login screen means we are logged out. Drop any pages Inertia
+    // prefetched under the previous session so a stale response can't leak a
+    // prior user's shared auth.permissions into the next session's sidebar.
+    // Covers every logout path (button, forced logout, boot-guard, expiry).
+    useEffect(() => {
+        router.flushAll();
+    }, []);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
