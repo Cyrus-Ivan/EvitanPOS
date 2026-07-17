@@ -205,14 +205,15 @@ export interface TransactionDetail {
 
 // Reports (Phase 12). Sales are recomputed from source tables as
 // net = gross − returns − defects; cogs/profit are Owner-only (absent otherwise).
-export type ReportPeriod = 'daily' | 'monthly';
+export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // One bucket (a day for daily, a month for monthly). Money fields are "0.00" strings.
 // cogs/profit/uncosted_sales are Owner-only (absent for everyone else). `profit`
 // covers only items with a recorded cost; net sales from items with no cost are
 // reported separately as `uncosted_sales` and excluded from profit.
 export interface ReportRow {
-    // '2026-07-12' for daily, '2026-07' for monthly.
+    // The drill-down sub-bucket key: '2026-07-12 14' (hour) for daily,
+    // '2026-07-12' (day) for weekly/monthly, '2026-07' (month) for yearly.
     bucket: string;
     transactions: number;
     gross_sales: string;
@@ -234,6 +235,21 @@ export interface ReportTotals {
     cogs?: string;
     profit?: string;
     uncosted_sales?: string;
+}
+
+// Stacked-chart legend entry: one per item (all its variants aggregated), plus a
+// trailing '__other__' bucket for items beyond the top few. `key` matches the
+// keys in ReportChartBucket.values.
+export interface ReportChartItem {
+    key: string;
+    name: string;
+}
+
+// One bucket's stacked breakdown: item key → that item's net sales ("0.00"
+// string, may be negative). Keys omitted from `values` are zero for that bucket.
+export interface ReportChartBucket {
+    bucket: string;
+    values: Record<string, string>;
 }
 
 export interface PaginationLink {
