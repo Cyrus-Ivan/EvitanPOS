@@ -620,6 +620,10 @@ progress bar covers slow cases; do not reopen in Phase 18/19.
 
 Verify the MVP.
 
+**Plan of record: `docs/phase-18-plan.md`** — a session-by-session final-review plan (testing
++ assumption-challenging + security + accuracy + code-quality review), with findings logged in
+`docs/phase-18-findings.md`.
+
 Authentication
 
 Inventory
