@@ -4,13 +4,16 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
 use App\Models\Concerns\HidesCostFromNonOwners;
+use Database\Factories\TransactionItemFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TransactionItem extends Model
 {
-    use HasUuidPrimaryKey, HidesCostFromNonOwners;
+    /** @use HasFactory<TransactionItemFactory> */
+    use HasFactory, HasUuidPrimaryKey, HidesCostFromNonOwners;
 
     // Append-only sale line: immutable business history.
     public const UPDATED_AT = null;

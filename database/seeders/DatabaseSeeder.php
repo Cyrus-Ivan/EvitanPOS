@@ -11,11 +11,12 @@ use Illuminate\Support\Facades\Hash;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * The baseline every installation needs: the single Owner account and the
+     * business-identity settings. Idempotent — safe to re-run.
      *
-     * Evitan POS requires exactly one Owner. This is a temporary dev seed so the
-     * app is usable immediately; proper first-run Owner provisioning is
-     * formalized in Phase 2 (Authentication).
+     * Local runs also get DemoDataSeeder (catalog, stock, sales history) so
+     * every screen has something to show during development. Elsewhere run it
+     * explicitly: `php artisan db:seed --class=DemoDataSeeder`.
      */
     public function run(): void
     {
@@ -38,6 +39,10 @@ class DatabaseSeeder extends Seeder
 
         foreach ($businessDefaults as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
+        }
+
+        if (app()->environment('local')) {
+            $this->call(DemoDataSeeder::class);
         }
     }
 }

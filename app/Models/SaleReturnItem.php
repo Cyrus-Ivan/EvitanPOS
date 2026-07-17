@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
 use App\Models\Concerns\HidesCostFromNonOwners;
+use Database\Factories\SaleReturnItemFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,7 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SaleReturnItem extends Model
 {
-    use HasUuidPrimaryKey, HidesCostFromNonOwners;
+    /** @use HasFactory<SaleReturnItemFactory> */
+    use HasFactory, HasUuidPrimaryKey, HidesCostFromNonOwners;
 
     // Append-only / immutable line: no updated_at.
     public const UPDATED_AT = null;

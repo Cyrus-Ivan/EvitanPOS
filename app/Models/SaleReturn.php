@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use Database\Factories\SaleReturnFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SaleReturn extends Model
 {
+    /** @use HasFactory<SaleReturnFactory> */
     use HasFactory, HasUuidPrimaryKey;
 
     // Append-only / immutable: no updated_at (matches inventory_ledger).
