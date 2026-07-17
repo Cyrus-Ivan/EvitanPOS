@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import type { BreadcrumbItem, CartLine, DiscountType, Paginated, PaymentType, PosProduct } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { LoaderCircle, Minus, Package, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Point of Sale', href: '/pos' }];
@@ -38,6 +38,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
     const [cashReceived, setCashReceived] = useState('');
     const [comment, setComment] = useState('');
     const [processing, setProcessing] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
 
     const addToCart = (product: PosProduct) => {
         if (product.current_stock <= 0) {
@@ -109,7 +110,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
     const insufficientCash = paymentType === 'cash' && cashNum < total;
 
     const checkout = () => {
-        if (cart.length === 0 || processing) {
+        if (cart.length === 0 || processing || insufficientCash) {
             return;
         }
 
@@ -142,6 +143,45 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
         );
     };
 
+    // Stable handle so the global-hotkey effect below never calls a stale closure.
+    const checkoutRef = useRef(checkout);
+    checkoutRef.current = checkout;
+
+    // Page-level keyboard support. Any printable key typed outside a field sends
+    // focus to the search box mid-keydown (the keystroke lands there), so a
+    // barcode scan is never lost after clicking a tile or the cart. F9 fires
+    // checkout. Space/Enter are left alone so focused product tiles stay
+    // keyboard-activatable. Trade-off: a Code-39 barcode containing a literal
+    // space would drop that character — fine for retail EAN/UPC/Code-128.
+    useEffect(() => {
+        const handler = (event: KeyboardEvent) => {
+            if (document.querySelector('[role="dialog"][data-state="open"]')) {
+                return;
+            }
+
+            if (event.key === 'F9') {
+                event.preventDefault();
+                checkoutRef.current();
+                return;
+            }
+
+            if (event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
+            if (event.key.length !== 1 || event.key === ' ') {
+                return;
+            }
+            const target = event.target as HTMLElement | null;
+            if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
+                return;
+            }
+            searchRef.current?.focus();
+        };
+
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Point of Sale" />
@@ -152,6 +192,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                         <div className="relative flex-1">
                             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
                             <Input
+                                ref={searchRef}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 onKeyDown={(e) => {
@@ -342,6 +383,12 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                                 id="cash-received"
                                 value={cashReceived}
                                 onChange={(e) => setCashReceived(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        checkout();
+                                    }
+                                }}
                                 inputMode="decimal"
                                 placeholder="0.00"
                                 className="tabular-nums"
@@ -366,13 +413,22 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                         />
                     </div>
 
-                    <Button className="mt-4 w-full" size="lg" onClick={checkout} disabled={cart.length === 0 || processing || insufficientCash}>
+                    <Button
+                        className="mt-4 w-full"
+                        size="lg"
+                        onClick={checkout}
+                        disabled={cart.length === 0 || processing || insufficientCash}
+                        title="Checkout (F9)"
+                    >
                         {processing ? (
                             <>
                                 <LoaderCircle className="h-4 w-4 animate-spin" /> Processing…
                             </>
                         ) : (
-                            `Checkout · ${formatPeso(total)}`
+                            <>
+                                Checkout · {formatPeso(total)}
+                                <kbd className="ml-1 rounded border px-1 font-sans text-[10px] opacity-70">F9</kbd>
+                            </>
                         )}
                     </Button>
                 </Card>
