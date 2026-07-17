@@ -262,6 +262,7 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
                                         onClick={() => removeVariant(index)}
                                         disabled={data.variants.length === 1}
                                         title={data.variants.length === 1 ? 'An item must keep at least one variant' : 'Remove variant'}
+                                        aria-label={data.variants.length === 1 ? 'An item must keep at least one variant' : 'Remove variant'}
                                     >
                                         <Trash2 className="size-4" />
                                     </Button>

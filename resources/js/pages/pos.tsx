@@ -337,6 +337,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                             onChange={(e) => setDiscountInput(e.target.value)}
                             inputMode="decimal"
                             placeholder="Discount"
+                            aria-label="Discount value"
                             className="flex-1"
                         />
                     </div>

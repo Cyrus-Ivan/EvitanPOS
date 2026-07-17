@@ -60,7 +60,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{options?.title}</DialogTitle>
-                        {options?.description && <DialogDescription>{options.description}</DialogDescription>}
+                        {/* Always rendered so the dialog keeps an accessible description. */}
+                        <DialogDescription className={options?.description ? undefined : 'sr-only'}>
+                            {options?.description ?? 'Review the action above, then confirm or cancel.'}
+                        </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => settle(false)}>

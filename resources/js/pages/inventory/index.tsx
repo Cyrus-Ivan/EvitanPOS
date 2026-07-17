@@ -234,6 +234,12 @@ export default function InventoryIndex({
                                                 <TableCell>{priceLabel(item)}</TableCell>
                                                 <TableCell>
                                                     {item.archived_at ? <Badge variant="secondary">Archived</Badge> : <Badge>Active</Badge>}
+                                                    {/* Text companion to the row tint so low stock is not color-only. */}
+                                                    {!item.archived_at && hasLowStock && (
+                                                        <Badge variant="destructive" className="ml-1 font-normal">
+                                                            Low stock
+                                                        </Badge>
+                                                    )}
                                                 </TableCell>
                                                 {canManage && (
                                                     <TableCell className="text-right">

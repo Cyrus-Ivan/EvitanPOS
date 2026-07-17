@@ -148,6 +148,9 @@ export default function Sales({
                             </TableHeader>
                             <TableBody>
                                 {transactions.data.map((row) => (
+                                    // The row onClick is a redundant mouse affordance; the receipt-number
+                                    // Link below is the keyboard-accessible path (a focusable row would
+                                    // double every tab stop for keyboard users).
                                     <TableRow key={row.id} className="cursor-pointer" onClick={() => router.visit(route('sales.show', row.id))}>
                                         <TableCell className="font-medium tabular-nums">
                                             <Link href={route('sales.show', row.id)} onClick={(e) => e.stopPropagation()} className="hover:underline">

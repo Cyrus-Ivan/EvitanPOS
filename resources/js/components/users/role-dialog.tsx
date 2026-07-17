@@ -1,6 +1,6 @@
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ManagedUser, UserRole } from '@/types';
@@ -57,12 +57,13 @@ export default function RoleDialog({
                 <form onSubmit={submit} className="space-y-4">
                     <DialogHeader>
                         <DialogTitle>Change role{user ? ` — ${user.name ?? user.username}` : ''}</DialogTitle>
+                        <DialogDescription>Changes what this user can see and do.</DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-2">
                         <Label htmlFor="role-select">Role</Label>
                         <Select value={data.role} onValueChange={(value) => setData('role', value)}>
-                            <SelectTrigger id="role-select">
+                            <SelectTrigger id="role-select" autoFocus>
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
