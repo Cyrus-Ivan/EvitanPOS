@@ -7,6 +7,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -29,5 +32,31 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            $status = $response->getStatusCode();
+
+            // Raw JSON endpoints (e.g. pos.lookup) keep their JSON error shape.
+            // Inertia visits request text/html, so they fall through to the
+            // mappings below.
+            if ($request->expectsJson()) {
+                return $response;
+            }
+
+            // A stale CSRF token must never dead-end the desktop app: bounce
+            // back with a toast; auth middleware handles the logged-out case.
+            if ($status === 419) {
+                return back()->with('toast', [
+                    'type' => 'error',
+                    'message' => 'Your session expired. Please try again.',
+                ]);
+            }
+
+            if (! config('app.debug') && in_array($status, [403, 404, 500, 503], true)) {
+                return Inertia::render('error', ['status' => $status])
+                    ->toResponse($request)
+                    ->setStatusCode($status);
+            }
+
+            return $response;
+        });
     })->create();
