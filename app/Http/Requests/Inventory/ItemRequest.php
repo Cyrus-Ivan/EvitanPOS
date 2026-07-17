@@ -17,6 +17,16 @@ use Illuminate\Validation\Validator;
 abstract class ItemRequest extends FormRequest
 {
     /**
+     * Second authorization layer (defense-in-depth) so inventory writes don't
+     * depend solely on the `role:admin` route group. Mirrors the `manage-inventory`
+     * gate — Admins and the Owner.
+     */
+    public function authorize(): bool
+    {
+        return $this->user()?->can('manage-inventory') ?? false;
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array

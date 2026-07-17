@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePermissions } from '@/hooks/use-permissions';
+import { outranks } from '@/lib/roles';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, ManagedUser, Paginated, UserRole } from '@/types';
 import { Head, router } from '@inertiajs/react';
@@ -18,7 +19,6 @@ import { useEffect, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'User Management', href: '/users' }];
 
-const ROLE_LEVEL: Record<UserRole, number> = { owner: 3, admin: 2, cashier: 1 };
 const ROLE_LABEL: Record<UserRole, string> = { owner: 'Owner', admin: 'Admin', cashier: 'Cashier' };
 
 interface Filters {
@@ -46,7 +46,7 @@ export default function UsersIndex({
 
     // The actor may act on a user only if they strictly outrank them (mirrors the
     // server-side UserPolicy). Owners are never manageable — nothing outranks them.
-    const canManage = (target: ManagedUser) => (role ? ROLE_LEVEL[role] > ROLE_LEVEL[target.role] : false);
+    const canManage = (target: ManagedUser) => (role ? outranks(role, target.role) : false);
 
     const applyFilters = (next: Partial<Filters>) => {
         const merged = { search, status: filters.status, ...next };

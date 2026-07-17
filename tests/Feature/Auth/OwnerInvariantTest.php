@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
 use App\Exceptions\CannotDeleteOwnerException;
+use App\Exceptions\MultipleOwnersException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,6 +12,36 @@ use Tests\TestCase;
 class OwnerInvariantTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_a_second_owner_cannot_be_created_at_the_model_layer()
+    {
+        User::factory()->owner()->create();
+
+        $this->expectException(MultipleOwnersException::class);
+
+        User::factory()->owner()->create();
+    }
+
+    public function test_an_existing_user_cannot_be_promoted_to_a_second_owner()
+    {
+        User::factory()->owner()->create();
+        $admin = User::factory()->admin()->create();
+
+        $this->expectException(MultipleOwnersException::class);
+
+        $admin->update(['role' => UserRole::Owner]);
+    }
+
+    public function test_the_owner_can_still_save_itself()
+    {
+        $owner = User::factory()->owner()->create();
+
+        // Updating the sole Owner's own attributes must not trip the guard.
+        $owner->update(['name' => 'Renamed Owner']);
+
+        $this->assertSame('Renamed Owner', $owner->fresh()->name);
+        $this->assertSame(1, User::where('role', UserRole::Owner->value)->count());
+    }
 
     public function test_owner_cannot_be_deleted_at_the_model_layer()
     {

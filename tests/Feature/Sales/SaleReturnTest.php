@@ -265,7 +265,9 @@ class SaleReturnTest extends TestCase
         $transaction = $this->sell([[$variant, 3]]);
         $line = $transaction->items->first();
 
-        $this->actingAs(User::factory()->owner()->create())
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
             ->post(route('sales.returns.store', $transaction), [
                 'type' => 'return',
                 'refund_payment_type' => 'cash',
@@ -274,7 +276,7 @@ class SaleReturnTest extends TestCase
             ->assertSessionHasNoErrors();
 
         // Owner sees the captured cost on the return line.
-        $this->actingAs(User::factory()->owner()->create())
+        $this->actingAs($owner)
             ->get(route('sales.show', $transaction))
             ->assertInertia(fn ($page) => $page
                 ->component('sales/show', false)

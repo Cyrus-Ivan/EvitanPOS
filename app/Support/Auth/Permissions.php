@@ -30,8 +30,11 @@ class Permissions
      */
     public static function forUser(?User $user): array
     {
+        // Guests clear no ability. Return a full false map (not an empty array)
+        // so the shared prop is always a keyed object matching the frontend
+        // Record<Permission, boolean> type, never a bare JSON array.
         if (! $user) {
-            return [];
+            return array_fill_keys(self::ABILITIES, false);
         }
 
         $gate = Gate::forUser($user);

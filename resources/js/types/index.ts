@@ -3,7 +3,9 @@ import { LucideIcon } from 'lucide-react';
 export type Permission = 'access-reports' | 'access-audit-logs' | 'manage-users' | 'access-settings' | 'access-backup' | 'view-item-cost';
 
 export interface Auth {
-    user: User;
+    // Null for guests (auth screens). Authenticated app pages run behind the
+    // `auth` layout, so within them the user is always present.
+    user: User | null;
     permissions: Record<Permission, boolean>;
 }
 
@@ -22,7 +24,12 @@ export interface NavItem {
     url: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
-    // Minimum role required to see this item. Omit for Cashier-level (everyone).
+    // Gate this item against a server-resolved ability (preferred — the client
+    // never re-implements the rule). Use for items whose route maps to a named
+    // Gate in Permissions::ABILITIES.
+    permission?: Permission;
+    // Fallback gate by minimum role, for items without a matching ability (e.g.
+    // Import/Export). Omit both for Cashier-level (visible to everyone).
     minRole?: UserRole;
 }
 

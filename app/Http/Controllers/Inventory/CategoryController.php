@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Support\Audit\AuditRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,6 +72,8 @@ class CategoryController extends Controller
 
     public function archive(Category $category, AuditRecorder $audit): RedirectResponse
     {
+        Gate::authorize('manage-inventory');
+
         $category->update(['archived_at' => now()]);
 
         $audit->record(
@@ -87,6 +90,8 @@ class CategoryController extends Controller
 
     public function restore(Category $category, AuditRecorder $audit): RedirectResponse
     {
+        Gate::authorize('manage-inventory');
+
         $category->update(['archived_at' => null]);
 
         $audit->record(

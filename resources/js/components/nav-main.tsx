@@ -1,22 +1,31 @@
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { usePermissions } from '@/hooks/use-permissions';
-import { type NavGroup } from '@/types';
+import { type NavGroup, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 
 export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
     const page = usePage();
-    const { hasRoleAtLeast } = usePermissions();
+    const { can, hasRoleAtLeast } = usePermissions();
 
     // Match on pathname only so query strings (e.g. a pre-filtered
     // ?variant=… on Stock History) don't drop the active highlight.
     const currentPath = page.url.split('?')[0];
 
-    // Gate every item by its minimum role, then drop any group left empty.
+    // Gate every item: prefer the server-resolved ability (can), fall back to the
+    // role floor for items without a matching ability, else always visible. Then
+    // drop any group left empty.
+    const isVisible = (item: NavItem): boolean => {
+        if (item.permission) {
+            return can(item.permission);
+        }
+        if (item.minRole) {
+            return hasRoleAtLeast(item.minRole);
+        }
+        return true;
+    };
+
     const visibleGroups = groups
-        .map((group) => ({
-            ...group,
-            items: group.items.filter((item) => !item.minRole || hasRoleAtLeast(item.minRole)),
-        }))
+        .map((group) => ({ ...group, items: group.items.filter(isVisible) }))
         .filter((group) => group.items.length > 0);
 
     return (

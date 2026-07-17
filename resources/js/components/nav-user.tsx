@@ -9,6 +9,8 @@ import { ChevronsUpDown } from 'lucide-react';
 
 export function NavUser() {
     const { auth } = usePage<SharedData>().props;
+    // Rendered inside the authenticated app sidebar, so the user is present.
+    const user = auth.user!;
     const { state } = useSidebar();
     const isMobile = useIsMobile();
 
@@ -18,7 +20,7 @@ export function NavUser() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton size="lg" className="text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent group">
-                            <UserInfo user={auth.user} />
+                            <UserInfo user={user} />
                             <ChevronsUpDown className="ml-auto size-4" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
@@ -27,7 +29,7 @@ export function NavUser() {
                         align="end"
                         side={isMobile ? 'bottom' : state === 'collapsed' ? 'left' : 'bottom'}
                     >
-                        <UserMenuContent user={auth.user} />
+                        <UserMenuContent user={user} />
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>

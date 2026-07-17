@@ -9,6 +9,15 @@ use Illuminate\Validation\Rule;
 class UpdateCategoryRequest extends FormRequest
 {
     /**
+     * Second authorization layer (defense-in-depth) beyond the `role:admin`
+     * route group — mirrors the `manage-inventory` gate.
+     */
+    public function authorize(): bool
+    {
+        return $this->user()?->can('manage-inventory') ?? false;
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array

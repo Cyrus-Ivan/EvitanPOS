@@ -12,6 +12,7 @@ use App\Support\Audit\AuditRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -66,6 +67,8 @@ class ItemController extends Controller
      */
     public function create(): Response
     {
+        Gate::authorize('manage-inventory');
+
         return Inertia::render('inventory/create', [
             'categories' => Category::active()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -108,6 +111,8 @@ class ItemController extends Controller
      */
     public function edit(Item $item): Response
     {
+        Gate::authorize('manage-inventory');
+
         $item->load(['variants' => fn ($query) => $query->active()->orderBy('created_at')]);
 
         return Inertia::render('inventory/edit', [
@@ -177,6 +182,8 @@ class ItemController extends Controller
 
     public function archive(Item $item, AuditRecorder $audit): RedirectResponse
     {
+        Gate::authorize('manage-inventory');
+
         $item->update(['archived_at' => now()]);
 
         $audit->record(
@@ -193,6 +200,8 @@ class ItemController extends Controller
 
     public function restore(Item $item, AuditRecorder $audit): RedirectResponse
     {
+        Gate::authorize('manage-inventory');
+
         $item->update(['archived_at' => null]);
 
         $audit->record(

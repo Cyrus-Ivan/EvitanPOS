@@ -31,23 +31,25 @@ const mainNavGroups: NavGroup[] = [
             { title: 'Sales', url: '/sales', icon: ReceiptText },
             { title: 'Inventory', url: '/inventory', icon: Package }, // view-only for Cashier
             { title: 'Stock History', url: '/inventory/stock-history', icon: PackageSearch }, // read-only ledger
+            // No dedicated ability backs the import/export routes, so this one
+            // gates by role floor; the routes are `role:admin` server-side.
             { title: 'Import / Export', url: '/inventory/import', icon: FileSpreadsheet, minRole: 'admin' },
         ],
     },
     {
         title: 'Insights',
         items: [
-            { title: 'Reports', url: '/reports', icon: ChartColumn, minRole: 'admin' },
+            { title: 'Reports', url: '/reports', icon: ChartColumn, permission: 'access-reports' },
             { title: 'Login History', url: '/login-history', icon: History }, // Cashier sees own
-            { title: 'Audit Logs', url: '/audit-logs', icon: ScrollText, minRole: 'admin' },
+            { title: 'Audit Logs', url: '/audit-logs', icon: ScrollText, permission: 'access-audit-logs' },
         ],
     },
     {
         title: 'Administration',
         items: [
-            { title: 'User Management', url: '/users', icon: UsersRound, minRole: 'admin' },
-            { title: 'Business Settings', url: '/business-settings', icon: Store, minRole: 'owner' },
-            { title: 'Database Backup', url: '/backup', icon: DatabaseBackup, minRole: 'owner' },
+            { title: 'User Management', url: '/users', icon: UsersRound, permission: 'manage-users' },
+            { title: 'Business Settings', url: '/business-settings', icon: Store, permission: 'access-settings' },
+            { title: 'Database Backup', url: '/backup', icon: DatabaseBackup, permission: 'access-backup' },
         ],
     },
 ];

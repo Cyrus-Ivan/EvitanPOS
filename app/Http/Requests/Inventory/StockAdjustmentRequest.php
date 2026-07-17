@@ -7,8 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Manual stock adjustment. Authorization is handled by the route `role:admin`
- * middleware (matches the app convention), so no authorize() override.
+ * Manual stock adjustment. Authorization is the `role:admin` route group plus a
+ * second `manage-inventory` gate check in authorize() (defense-in-depth).
  *
  * Two modes:
  *  - `delta` (default) → `value` is the signed change to apply (+add / −remove).
@@ -20,6 +20,11 @@ use Illuminate\Validation\Rule;
  */
 class StockAdjustmentRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->can('manage-inventory') ?? false;
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

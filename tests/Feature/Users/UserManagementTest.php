@@ -78,6 +78,58 @@ class UserManagementTest extends TestCase
         $this->assertSame(1, User::where('role', UserRole::Owner->value)->count());
     }
 
+    public function test_admin_cannot_promote_a_cashier_to_admin_via_role_change()
+    {
+        $admin = User::factory()->admin()->create();
+        $cashier = User::factory()->cashier()->create();
+
+        // The admin outranks the cashier (so `manage` passes), but `admin` is not
+        // in the admin's assignable set — the escalation is rejected by validation.
+        $this->actingAs($admin)
+            ->patch(route('users.role', $cashier->id), ['role' => UserRole::Admin->value])
+            ->assertSessionHasErrors('role');
+
+        $this->assertSame(UserRole::Cashier, $cashier->fresh()->role);
+    }
+
+    public function test_nobody_can_promote_a_user_to_owner_via_role_change()
+    {
+        $owner = User::factory()->owner()->create();
+        $admin = User::factory()->admin()->create();
+
+        // Even the Owner may not mint a second Owner by editing an existing role.
+        $this->actingAs($owner)
+            ->patch(route('users.role', $admin->id), ['role' => UserRole::Owner->value])
+            ->assertSessionHasErrors('role');
+
+        $this->assertSame(UserRole::Admin, $admin->fresh()->role);
+        $this->assertSame(1, User::where('role', UserRole::Owner->value)->count());
+    }
+
+    public function test_an_actor_cannot_manage_themselves()
+    {
+        $admin = User::factory()->admin()->create();
+
+        // Equal rank is not strictly outranked, so self-management is forbidden.
+        $this->actingAs($admin)
+            ->patch(route('users.role', $admin->id), ['role' => UserRole::Cashier->value])
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->patch(route('users.archive', $admin->id))
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->patch(route('users.reset-password', $admin->id), [
+                'password' => 'brandnewpass',
+                'password_confirmation' => 'brandnewpass',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(UserRole::Admin, $admin->fresh()->role);
+        $this->assertNull($admin->fresh()->deleted_at);
+    }
+
     public function test_duplicate_username_is_rejected()
     {
         User::factory()->cashier()->create(['username' => 'taken']);

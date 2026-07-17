@@ -9,11 +9,16 @@ use Illuminate\Foundation\Http\FormRequest;
  * Upload validation for the inventory CSV import (Phase 7). Only the file
  * envelope is checked here — per-row content validation lives in
  * CsvInventoryImporter so it can produce user-friendly, row-attributed errors.
- * Authorization is handled by the route `role:admin` middleware, so no
- * authorize() override is needed (matches the app convention).
+ * Authorization is the `role:admin` route group plus a second `manage-inventory`
+ * gate check in authorize() (defense-in-depth).
  */
 class InventoryImportRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->can('manage-inventory') ?? false;
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

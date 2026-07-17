@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-reports', fn (User $user): bool => $user->hasRoleAtLeast(UserRole::Admin));
         Gate::define('access-audit-logs', fn (User $user): bool => $user->hasRoleAtLeast(UserRole::Admin));
         Gate::define('manage-users', fn (User $user): bool => $user->hasRoleAtLeast(UserRole::Admin));
+        // Backend-only second layer for inventory writes (not surfaced to the
+        // frontend permission map). Backs the explicit authorize() calls that
+        // no longer let inventory writes depend solely on route placement.
+        Gate::define('manage-inventory', fn (User $user): bool => $user->hasRoleAtLeast(UserRole::Admin));
 
         // Owner-only.
         Gate::define('access-settings', fn (User $user): bool => $user->isOwner());

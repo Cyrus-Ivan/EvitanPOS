@@ -24,7 +24,9 @@ class InventoryExportTest extends TestCase
             'selling_price' => 20,
             'cost' => 12.5,
         ]);
-        app(StockLedger::class)->record($variant, 42, 'stock_adjustment', null, 'manual_adjustment', null, User::factory()->owner()->create());
+        // Any user can attribute the ledger row; keep it a non-Owner so tests
+        // that also create an Owner actor don't breach the single-Owner invariant.
+        app(StockLedger::class)->record($variant, 42, 'stock_adjustment', null, 'manual_adjustment', null, User::factory()->admin()->create());
 
         return $variant;
     }

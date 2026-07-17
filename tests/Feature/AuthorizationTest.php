@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\TransactionItem;
 use App\Models\User;
 use App\Models\Variant;
+use App\Support\Auth\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -176,6 +177,18 @@ class AuthorizationTest extends TestCase
                 ->where('auth.permissions.access-reports', true)
                 ->where('auth.permissions.access-settings', true)
                 ->where('auth.permissions.view-item-cost', true)
+        );
+    }
+
+    public function test_guest_permission_map_is_a_full_false_object_not_an_empty_array()
+    {
+        $map = Permissions::forUser(null);
+
+        // Every named ability is present and false, so the shared prop always
+        // serializes as a keyed object matching Record<Permission, boolean>.
+        $this->assertSame(
+            array_fill_keys(Permissions::ABILITIES, false),
+            $map,
         );
     }
 }

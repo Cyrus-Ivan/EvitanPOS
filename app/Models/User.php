@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Exceptions\CannotDeleteOwnerException;
+use App\Exceptions\MultipleOwnersException;
 use App\Models\Concerns\HasUuidPrimaryKey;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -52,11 +53,28 @@ class User extends Authenticatable
     }
 
     /**
-     * Guard the "Owner can never be archived or deleted" invariant at the model
-     * layer, so no code path (soft or force delete) can remove the Owner.
+     * Guard the Owner invariants at the model layer, so no code path can breach
+     * them — not just the HTTP forms:
+     *  - "exactly one Owner": reject creating or promoting a second Owner
+     *    (the `saving` hook fires on both insert and update);
+     *  - "the Owner can never be archived or deleted": reject any soft/force
+     *    delete of the Owner.
      */
     protected static function booted(): void
     {
+        static::saving(function (User $user): void {
+            if ($user->role === UserRole::Owner
+                && static::query()
+                    ->where('role', UserRole::Owner)
+                    // On create the row has no key yet; on update, exclude the
+                    // Owner saving itself (name/password changes) so it isn't
+                    // mistaken for a second Owner.
+                    ->when($user->exists, fn ($query) => $query->whereKeyNot($user->getKey()))
+                    ->exists()) {
+                throw new MultipleOwnersException;
+            }
+        });
+
         static::deleting(function (User $user): void {
             if ($user->role === UserRole::Owner) {
                 throw new CannotDeleteOwnerException;

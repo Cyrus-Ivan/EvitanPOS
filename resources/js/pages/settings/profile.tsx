@@ -21,10 +21,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Profile() {
     const { auth } = usePage<SharedData>().props;
+    // The profile page renders behind the `auth` layout, so the user is present.
+    const user = auth.user!;
 
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
-        name: auth.user.name ?? '',
-        username: auth.user.username,
+        name: user.name ?? '',
+        username: user.username,
     });
 
     const submit: FormEventHandler = (e) => {

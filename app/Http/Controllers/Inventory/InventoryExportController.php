@@ -22,6 +22,8 @@ class InventoryExportController extends Controller
 {
     public function __invoke(): StreamedResponse
     {
+        Gate::authorize('manage-inventory');
+
         $includeCost = Gate::allows('view-item-cost');
         $headers = InventoryCsvSchema::headers($includeCost);
         $filename = 'inventory-export-'.now()->format('Ymd-His').'.csv';
