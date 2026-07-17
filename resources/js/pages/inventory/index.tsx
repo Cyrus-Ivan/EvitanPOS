@@ -286,9 +286,15 @@ export default function InventoryIndex({
                                                                                         : 'hover:bg-transparent'
                                                                                 }
                                                                             >
-                                                                                <TableCell className="pr-8 font-medium">{variant.name || item.name}</TableCell>
-                                                                                <TableCell className="pr-8 tabular-nums">{variant.sku ?? '—'}</TableCell>
-                                                                                <TableCell className="pr-8 tabular-nums">{variant.barcode ?? '—'}</TableCell>
+                                                                                <TableCell className="pr-8 font-medium">
+                                                                                    {variant.name || item.name}
+                                                                                </TableCell>
+                                                                                <TableCell className="pr-8 tabular-nums">
+                                                                                    {variant.sku ?? '—'}
+                                                                                </TableCell>
+                                                                                <TableCell className="pr-8 tabular-nums">
+                                                                                    {variant.barcode ?? '—'}
+                                                                                </TableCell>
                                                                                 <TableCell className="pr-8 text-right tabular-nums">
                                                                                     {Number(variant.selling_price).toFixed(2)}
                                                                                 </TableCell>
@@ -316,13 +322,17 @@ export default function InventoryIndex({
                                                                                             <Button
                                                                                                 variant="ghost"
                                                                                                 size="sm"
-                                                                                                onClick={() => setAdjustTarget({ variant, itemName: item.name })}
+                                                                                                onClick={() =>
+                                                                                                    setAdjustTarget({ variant, itemName: item.name })
+                                                                                                }
                                                                                             >
                                                                                                 <SlidersHorizontal className="size-4" /> Adjust
                                                                                             </Button>
                                                                                             <Button variant="ghost" size="sm" asChild>
                                                                                                 <Link
-                                                                                                    href={route('stock-history.index', { variant: variant.id })}
+                                                                                                    href={route('stock-history.index', {
+                                                                                                        variant: variant.id,
+                                                                                                    })}
                                                                                                 >
                                                                                                     <History className="size-4" /> History
                                                                                                 </Link>

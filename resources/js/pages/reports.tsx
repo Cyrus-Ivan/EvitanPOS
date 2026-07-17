@@ -36,9 +36,7 @@ function formatBucket(bucket: string, period: ReportPeriod): string {
         return Number.isNaN(date.getTime()) ? bucket : date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
     const date = new Date(bucket);
-    return Number.isNaN(date.getTime())
-        ? bucket
-        : date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    return Number.isNaN(date.getTime()) ? bucket : date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 // Singular noun for the sub-bucket (drill-down) granularity, used in the chart
@@ -54,7 +52,7 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
     return (
         <Card>
             <CardContent className="p-4">
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+                <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</div>
                 <div
                     className={
                         'mt-1 text-2xl font-semibold tabular-nums ' +
@@ -134,7 +132,13 @@ export default function Reports({
                         <Button variant="outline" size="icon" onClick={() => goToDate(filters.prev)} aria-label="Previous period">
                             <ChevronLeft className="size-4" />
                         </Button>
-                        <Input type="date" value={filters.date} onChange={(e) => goToDate(e.target.value)} className="w-40" aria-label="Report date" />
+                        <Input
+                            type="date"
+                            value={filters.date}
+                            onChange={(e) => goToDate(e.target.value)}
+                            className="w-40"
+                            aria-label="Report date"
+                        />
                         <Button variant="outline" size="icon" onClick={() => goToDate(filters.next)} aria-label="Next period">
                             <ChevronRight className="size-4" />
                         </Button>
@@ -156,9 +160,7 @@ export default function Reports({
                     <StatCard label="Defects" value={formatPeso(totals.defects)} tone="negative" />
                     <StatCard label="Net sales" value={formatPeso(totals.net_sales)} tone="net" />
                     {canViewCost && <StatCard label="Gross profit" value={formatPeso(totals.profit ?? '0')} tone="net" />}
-                    {canViewCost && (
-                        <StatCard label="Uncosted sales" value={formatPeso(totals.uncosted_sales ?? '0')} tone="negative" />
-                    )}
+                    {canViewCost && <StatCard label="Uncosted sales" value={formatPeso(totals.uncosted_sales ?? '0')} tone="negative" />}
                 </div>
 
                 {rows.length === 0 ? (
@@ -172,9 +174,7 @@ export default function Reports({
                         {/* Net sales over time, stacked by item. */}
                         <Card>
                             <CardContent className="p-4">
-                                <div className="mb-3 text-sm font-medium text-muted-foreground">
-                                    Net sales by item, per {SUB_NOUN[period]}
-                                </div>
+                                <div className="text-muted-foreground mb-3 text-sm font-medium">Net sales by item, per {SUB_NOUN[period]}</div>
                                 <SalesBarChart chart={chart} items={chartItems} period={period} />
                             </CardContent>
                         </Card>
@@ -200,15 +200,15 @@ export default function Reports({
                                             <TableCell className="font-medium">{formatBucket(row.bucket, period)}</TableCell>
                                             <TableCell className="text-right tabular-nums">{row.transactions}</TableCell>
                                             <TableCell className="text-right tabular-nums">{formatPeso(row.gross_sales)}</TableCell>
-                                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                                            <TableCell className="text-muted-foreground text-right tabular-nums">
                                                 {Number(row.returns) > 0 ? `−${formatPeso(row.returns)}` : formatPeso(row.returns)}
                                             </TableCell>
-                                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                                            <TableCell className="text-muted-foreground text-right tabular-nums">
                                                 {Number(row.defects) > 0 ? `−${formatPeso(row.defects)}` : formatPeso(row.defects)}
                                             </TableCell>
                                             <TableCell className="text-right font-medium tabular-nums">{formatPeso(row.net_sales)}</TableCell>
                                             {canViewCost && (
-                                                <TableCell className="text-right tabular-nums text-muted-foreground">
+                                                <TableCell className="text-muted-foreground text-right tabular-nums">
                                                     {formatPeso(row.uncosted_sales ?? '0')}
                                                 </TableCell>
                                             )}
@@ -223,15 +223,15 @@ export default function Reports({
                                         <TableCell className="font-medium">Total</TableCell>
                                         <TableCell className="text-right tabular-nums">{totals.transactions}</TableCell>
                                         <TableCell className="text-right tabular-nums">{formatPeso(totals.gross_sales)}</TableCell>
-                                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                                        <TableCell className="text-muted-foreground text-right tabular-nums">
                                             {Number(totals.returns) > 0 ? `−${formatPeso(totals.returns)}` : formatPeso(totals.returns)}
                                         </TableCell>
-                                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                                        <TableCell className="text-muted-foreground text-right tabular-nums">
                                             {Number(totals.defects) > 0 ? `−${formatPeso(totals.defects)}` : formatPeso(totals.defects)}
                                         </TableCell>
                                         <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totals.net_sales)}</TableCell>
                                         {canViewCost && (
-                                            <TableCell className="text-right font-semibold tabular-nums text-muted-foreground">
+                                            <TableCell className="text-muted-foreground text-right font-semibold tabular-nums">
                                                 {formatPeso(totals.uncosted_sales ?? '0')}
                                             </TableCell>
                                         )}

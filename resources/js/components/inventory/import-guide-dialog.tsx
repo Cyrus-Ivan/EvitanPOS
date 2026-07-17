@@ -64,13 +64,15 @@ const COLUMNS: ColumnDoc[] = [
         name: 'unit',
         required: false,
         type: 'text',
-        description: 'Unit of measure — pc, kg, box. Set when the product is created (defaults to “pc”). Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different unit is rejected.',
+        description:
+            'Unit of measure — pc, kg, box. Set when the product is created (defaults to “pc”). Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different unit is rejected.',
     },
     {
         name: 'description',
         required: false,
         type: 'text',
-        description: 'Free-text notes, set when the product is created. Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different description is rejected.',
+        description:
+            'Free-text notes, set when the product is created. Fixed after creation: on an existing product leave it blank (or repeat the current value) — a different description is rejected.',
     },
     {
         name: 'low_stock_threshold',
@@ -188,16 +190,16 @@ export default function ImportGuideDialog() {
                             <ul className="mt-1.5 list-disc space-y-1 pl-5">
                                 <li>
                                     The <Mono>product</Mono> name, <Mono>variant</Mono> name, <Mono>barcode</Mono>, <Mono>unit</Mono> and{' '}
-                                    <Mono>description</Mono> can’t be changed by import. Leave the cell blank, or repeat the current value — edit these
-                                    in <strong>Inventory</strong>.
+                                    <Mono>description</Mono> can’t be changed by import. Leave the cell blank, or repeat the current value — edit
+                                    these in <strong>Inventory</strong>.
                                 </li>
                                 <li>
-                                    <Mono>category</Mono> is the exception: a different (active) category <strong>moves</strong> the product; blank keeps
-                                    the current one.
+                                    <Mono>category</Mono> is the exception: a different (active) category <strong>moves</strong> the product; blank
+                                    keeps the current one.
                                 </li>
                                 <li>
-                                    You <strong>can’t rename a SKU</strong> here. Change a SKU and it reads as a brand-new variant, leaving the old one
-                                    untouched.
+                                    You <strong>can’t rename a SKU</strong> here. Change a SKU and it reads as a brand-new variant, leaving the old
+                                    one untouched.
                                 </li>
                             </ul>
                         </Callout>

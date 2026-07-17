@@ -111,7 +111,7 @@ export default function Sales({
                         </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">From</span>
+                        <span className="text-muted-foreground text-sm">From</span>
                         <Input
                             type="date"
                             value={filters.date_from ?? ''}
@@ -119,7 +119,7 @@ export default function Sales({
                             onChange={(e) => applyFilters({ date_from: e.target.value || null })}
                             className="w-40"
                         />
-                        <span className="text-sm text-muted-foreground">To</span>
+                        <span className="text-muted-foreground text-sm">To</span>
                         <Input
                             type="date"
                             value={filters.date_to ?? ''}
@@ -148,11 +148,7 @@ export default function Sales({
                             </TableHeader>
                             <TableBody>
                                 {transactions.data.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="cursor-pointer"
-                                        onClick={() => router.visit(route('sales.show', row.id))}
-                                    >
+                                    <TableRow key={row.id} className="cursor-pointer" onClick={() => router.visit(route('sales.show', row.id))}>
                                         <TableCell className="font-medium tabular-nums">
                                             <Link href={route('sales.show', row.id)} onClick={(e) => e.stopPropagation()} className="hover:underline">
                                                 {row.transaction_number}
@@ -166,7 +162,7 @@ export default function Sales({
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">{row.items_count}</TableCell>
-                                        <TableCell className="text-right tabular-nums text-muted-foreground">{discountLabel(row)}</TableCell>
+                                        <TableCell className="text-muted-foreground text-right tabular-nums">{discountLabel(row)}</TableCell>
                                         <TableCell className="text-right font-medium tabular-nums">{peso(row.total)}</TableCell>
                                     </TableRow>
                                 ))}

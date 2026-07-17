@@ -55,19 +55,13 @@ function discountLabel(transaction: TransactionDetail): string {
 function Field({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground uppercase">{label}</span>
+            <span className="text-muted-foreground text-xs uppercase">{label}</span>
             <span className="text-sm tabular-nums">{value}</span>
         </div>
     );
 }
 
-export default function SalesShow({
-    transaction,
-    canViewCost,
-}: {
-    transaction: TransactionDetail;
-    canViewCost: boolean;
-}) {
+export default function SalesShow({ transaction, canViewCost }: { transaction: TransactionDetail; canViewCost: boolean }) {
     const { hasRoleAtLeast } = usePermissions();
     const [dialogType, setDialogType] = useState<SaleReturnType | null>(null);
     const [printing, setPrinting] = useState(false);
@@ -85,7 +79,7 @@ export default function SalesShow({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Receipt ${transaction.transaction_number}`} />
             <div className="mx-auto flex min-h-full w-full max-w-3xl flex-1 flex-col gap-4 p-4">
-                <Link href={route('sales')} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                <Link href={route('sales')} className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm">
                     <ArrowLeft className="size-4" />
                     Back to Sales
                 </Link>
@@ -94,7 +88,7 @@ export default function SalesShow({
                     <CardHeader className="flex flex-row items-start justify-between gap-2">
                         <div>
                             <CardTitle className="tabular-nums">Receipt {transaction.transaction_number}</CardTitle>
-                            <p className="mt-1 text-sm text-muted-foreground">{formatWhen(transaction.created_at)}</p>
+                            <p className="text-muted-foreground mt-1 text-sm">{formatWhen(transaction.created_at)}</p>
                         </div>
                         <Badge variant="secondary">{PAYMENT_LABEL[transaction.payment_type] ?? transaction.payment_type}</Badge>
                     </CardHeader>
@@ -123,7 +117,7 @@ export default function SalesShow({
                                             <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
                                             <TableCell className="text-right tabular-nums">{peso(line.selling_price)}</TableCell>
                                             {canViewCost && (
-                                                <TableCell className="text-right tabular-nums text-muted-foreground">
+                                                <TableCell className="text-muted-foreground text-right tabular-nums">
                                                     {peso(line.cost ?? null)}
                                                 </TableCell>
                                             )}
@@ -133,13 +127,13 @@ export default function SalesShow({
                                 </TableBody>
                                 <TableFooter>
                                     <TableRow>
-                                        <TableCell colSpan={canViewCost ? 4 : 3} className="text-right text-muted-foreground">
+                                        <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                             Subtotal
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">{peso(subtotalOf(transaction).toFixed(2))}</TableCell>
                                     </TableRow>
                                     <TableRow>
-                                        <TableCell colSpan={canViewCost ? 4 : 3} className="text-right text-muted-foreground">
+                                        <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                             Discount
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">{discountLabel(transaction)}</TableCell>
@@ -153,13 +147,13 @@ export default function SalesShow({
                                     {transaction.payment_type === 'cash' && (
                                         <>
                                             <TableRow>
-                                                <TableCell colSpan={canViewCost ? 4 : 3} className="text-right text-muted-foreground">
+                                                <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                                     Cash Received
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums">{peso(transaction.cash_received)}</TableCell>
                                             </TableRow>
                                             <TableRow>
-                                                <TableCell colSpan={canViewCost ? 4 : 3} className="text-right text-muted-foreground">
+                                                <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                                     Change
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums">{peso(transaction.change)}</TableCell>
@@ -238,7 +232,7 @@ function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canVi
                     <Badge variant={RETURN_TYPE_BADGE[event.type]}>{RETURN_TYPE_LABEL[event.type]}</Badge>
                     <span className="text-sm font-medium tabular-nums">{event.return_number}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatWhen(event.created_at)}</span>
+                <span className="text-muted-foreground text-xs">{formatWhen(event.created_at)}</span>
             </div>
             <div className="px-3 py-2">
                 <Table>
@@ -256,7 +250,7 @@ function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canVi
                                 <TableCell className="font-medium">{line.label}</TableCell>
                                 <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
                                 {canViewCost && (
-                                    <TableCell className="text-right tabular-nums text-muted-foreground">{peso(line.cost ?? null)}</TableCell>
+                                    <TableCell className="text-muted-foreground text-right tabular-nums">{peso(line.cost ?? null)}</TableCell>
                                 )}
                                 <TableCell className="text-right tabular-nums">{peso(line.refund_amount)}</TableCell>
                             </TableRow>
@@ -271,11 +265,11 @@ function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canVi
                         </TableRow>
                     </TableFooter>
                 </Table>
-                <div className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-1 flex flex-wrap justify-between gap-2 text-xs">
                     <span>By {event.performed_by?.name ?? event.performed_by?.username ?? '—'}</span>
                     {event.refund_payment_type && <span>via {PAYMENT_LABEL[event.refund_payment_type]}</span>}
                 </div>
-                {event.reason && <p className="mt-1 text-xs text-muted-foreground">Reason: {event.reason}</p>}
+                {event.reason && <p className="text-muted-foreground mt-1 text-xs">Reason: {event.reason}</p>}
             </div>
         </div>
     );

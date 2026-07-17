@@ -10,7 +10,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import type { Category, Item } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Link, useForm } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { LoaderCircle, Plus, Trash2 } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 // Declared as `type` (not `interface`) so they satisfy Inertia's
@@ -357,7 +357,10 @@ export default function ItemForm({ item, categories }: { item?: Item; categories
             </section>
 
             <div className="flex items-center gap-4">
-                <Button disabled={processing}>{isEdit ? 'Save changes' : 'Create item'}</Button>
+                <Button disabled={processing}>
+                    {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                    {isEdit ? 'Save changes' : 'Create item'}
+                </Button>
                 <Button type="button" variant="outline" asChild>
                     <Link href={route('inventory')}>Cancel</Link>
                 </Button>

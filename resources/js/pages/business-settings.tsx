@@ -11,7 +11,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Printer, RefreshCw } from 'lucide-react';
+import { LoaderCircle, Printer, RefreshCw } from 'lucide-react';
 import { FormEventHandler, useCallback, useEffect, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Business Settings', href: '/business-settings' }];
@@ -137,7 +137,12 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
 
                         <div className="grid gap-2">
                             <Label htmlFor="tin">TIN</Label>
-                            <Input id="tin" value={data.tin} onChange={(e) => setData('tin', e.target.value)} placeholder="Tax Identification Number" />
+                            <Input
+                                id="tin"
+                                value={data.tin}
+                                onChange={(e) => setData('tin', e.target.value)}
+                                placeholder="Tax Identification Number"
+                            />
                             <InputError message={errors.tin} />
                         </div>
 
@@ -153,7 +158,10 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <Button disabled={processing}>Save</Button>
+                            <Button disabled={processing}>
+                                {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                                Save
+                            </Button>
 
                             <Transition
                                 show={recentlySuccessful}
@@ -179,10 +187,7 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                     <form onSubmit={submitPrinter} className="max-w-xl space-y-6">
                         <div className="grid gap-2">
                             <Label htmlFor="receipt_paper_size">Paper width</Label>
-                            <Select
-                                value={printer.data.receipt_paper_size}
-                                onValueChange={(value) => printer.setData('receipt_paper_size', value)}
-                            >
+                            <Select value={printer.data.receipt_paper_size} onValueChange={(value) => printer.setData('receipt_paper_size', value)}>
                                 <SelectTrigger id="receipt_paper_size" className="w-56">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -196,10 +201,7 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
 
                         <div className="grid gap-2">
                             <Label htmlFor="receipt_connection">Connection</Label>
-                            <Select
-                                value={printer.data.receipt_connection}
-                                onValueChange={(value) => printer.setData('receipt_connection', value)}
-                            >
+                            <Select value={printer.data.receipt_connection} onValueChange={(value) => printer.setData('receipt_connection', value)}>
                                 <SelectTrigger id="receipt_connection" className="w-56">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -210,8 +212,9 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                     <SelectItem value="network">Network (Wi-Fi / Ethernet)</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
-                                <strong>System printer</strong> is recommended on macOS &amp; Windows — install the printer in the OS, then pick it below.
+                            <p className="text-muted-foreground text-xs">
+                                <strong>System printer</strong> is recommended on macOS &amp; Windows — install the printer in the OS, then pick it
+                                below.
                             </p>
                             <InputError message={printer.errors.receipt_connection} />
                         </div>
@@ -234,7 +237,11 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                 </div>
                                 {detectedPrinters.length > 0 && (
                                     <Select
-                                        value={detectedPrinters.some((p) => p.name === printer.data.receipt_printer_name) ? printer.data.receipt_printer_name : ''}
+                                        value={
+                                            detectedPrinters.some((p) => p.name === printer.data.receipt_printer_name)
+                                                ? printer.data.receipt_printer_name
+                                                : ''
+                                        }
                                         onValueChange={(value) => printer.setData('receipt_printer_name', value)}
                                     >
                                         <SelectTrigger id="receipt_printer_name" className="w-full">
@@ -255,7 +262,7 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                     placeholder="Printer queue name"
                                     aria-label="Printer queue name"
                                 />
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                     {detected && detectedPrinters.length === 0
                                         ? 'No printers detected automatically — type the exact OS print-queue name.'
                                         : 'Pick a detected printer, or type the exact OS print-queue name.'}
@@ -296,10 +303,10 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                     onChange={(e) => printer.setData('receipt_device_path', e.target.value)}
                                     placeholder="/dev/usb/lp0"
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Linux USB printers are usually <code>/dev/usb/lp0</code>; a paired Bluetooth printer is{' '}
-                                    <code>/dev/rfcomm0</code> (Linux) or <code>/dev/cu.*</code> (macOS). The app needs write access to
-                                    the device. On macOS/Windows, prefer <strong>System printer</strong> above.
+                                <p className="text-muted-foreground text-xs">
+                                    Linux USB printers are usually <code>/dev/usb/lp0</code>; a paired Bluetooth printer is <code>/dev/rfcomm0</code>{' '}
+                                    (Linux) or <code>/dev/cu.*</code> (macOS). The app needs write access to the device. On macOS/Windows, prefer{' '}
+                                    <strong>System printer</strong> above.
                                 </p>
                                 <InputError message={printer.errors.receipt_device_path} />
                             </div>
@@ -312,7 +319,9 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                             />
                             <span className="grid gap-1">
                                 <span className="text-sm font-medium">Print automatically after each sale</span>
-                                <span className="text-xs text-muted-foreground">A failed print never cancels the sale — you can always reprint from Sales.</span>
+                                <span className="text-muted-foreground text-xs">
+                                    A failed print never cancels the sale — you can always reprint from Sales.
+                                </span>
                             </span>
                         </label>
 
@@ -323,12 +332,15 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                             />
                             <span className="grid gap-1">
                                 <span className="text-sm font-medium">Open the cash drawer when printing</span>
-                                <span className="text-xs text-muted-foreground">Sends a drawer-kick pulse to a drawer wired to the printer.</span>
+                                <span className="text-muted-foreground text-xs">Sends a drawer-kick pulse to a drawer wired to the printer.</span>
                             </span>
                         </label>
 
                         <div className="flex items-center gap-3">
-                            <Button disabled={printer.processing}>Save</Button>
+                            <Button disabled={printer.processing}>
+                                {printer.processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                                Save
+                            </Button>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -348,7 +360,7 @@ export default function BusinessSettings({ settings, printerSettings }: { settin
                                 <p className="text-sm text-neutral-600">Saved</p>
                             </Transition>
                         </div>
-                        <p className="text-xs text-muted-foreground">Save your changes before running a test print.</p>
+                        <p className="text-muted-foreground text-xs">Save your changes before running a test print.</p>
                     </form>
                 </section>
             </div>

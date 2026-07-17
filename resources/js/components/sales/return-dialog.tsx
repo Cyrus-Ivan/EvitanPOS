@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import type { PaymentType, SaleReturnType, TransactionDetail } from '@/types';
 import { useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 const REFUND_METHODS: { value: PaymentType; label: string }[] = [
@@ -118,7 +119,7 @@ export default function ReturnDialog({
                                 {remainingLines.map(({ line, remaining }) => (
                                     <TableRow key={line.id}>
                                         <TableCell className="font-medium">{line.label}</TableCell>
-                                        <TableCell className="text-right tabular-nums text-muted-foreground">{remaining}</TableCell>
+                                        <TableCell className="text-muted-foreground text-right tabular-nums">{remaining}</TableCell>
                                         <TableCell className="text-right">
                                             <Input
                                                 type="number"
@@ -133,7 +134,7 @@ export default function ReturnDialog({
                                 ))}
                                 {remainingLines.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                                        <TableCell colSpan={3} className="text-muted-foreground text-center text-sm">
                                             Every line has already been fully returned.
                                         </TableCell>
                                     </TableRow>
@@ -142,7 +143,9 @@ export default function ReturnDialog({
                         </Table>
                     </div>
 
-                    <InputError message={(errors as Record<string, string | undefined>).lines ?? (errors as Record<string, string | undefined>).type} />
+                    <InputError
+                        message={(errors as Record<string, string | undefined>).lines ?? (errors as Record<string, string | undefined>).type}
+                    />
 
                     {!isDefect && (
                         <div className="grid gap-2">
@@ -181,6 +184,7 @@ export default function ReturnDialog({
                             Cancel
                         </Button>
                         <Button disabled={processing || !canSubmit}>
+                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                             {copy.action}
                         </Button>
                     </DialogFooter>

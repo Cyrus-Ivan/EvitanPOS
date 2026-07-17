@@ -204,7 +204,7 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
             {/* Legend — identity is never color-alone. */}
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                 {items.map((item, s) => (
-                    <div key={item.key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div key={item.key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <span className={'inline-block size-2.5 rounded-[3px] ' + swatchFor(item, s)} />
                         {item.name}
                     </div>
@@ -214,11 +214,11 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
             {/* HTML tooltip: positioned by the hovered bar's fractional x within the plot. */}
             {hover !== null && (
                 <div
-                    className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border bg-popover px-3 py-2 text-xs shadow-md"
+                    className="bg-popover pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border px-3 py-2 text-xs shadow-md"
                     style={{ left: `${((PAD_L + slot * (hover + 0.5)) / VB_W) * 100}%` }}
                 >
-                    <div className="font-medium text-popover-foreground">{fullLabel(columns[hover].bucket, period)}</div>
-                    <dl className="mt-1 grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-0.5 tabular-nums text-muted-foreground">
+                    <div className="text-popover-foreground font-medium">{fullLabel(columns[hover].bucket, period)}</div>
+                    <dl className="text-muted-foreground mt-1 grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-0.5 tabular-nums">
                         {items.map((item, s) => {
                             const value = columns[hover].values[s];
                             if (value === 0) return null;
@@ -226,13 +226,13 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
                                 <div key={item.key} className="contents">
                                     <span className={'inline-block size-2 rounded-[2px] ' + swatchFor(item, s)} />
                                     <dt className="truncate">{item.name}</dt>
-                                    <dd className="text-right text-popover-foreground">{formatPeso(value.toFixed(2))}</dd>
+                                    <dd className="text-popover-foreground text-right">{formatPeso(value.toFixed(2))}</dd>
                                 </div>
                             );
                         })}
                         <span />
                         <dt className="font-medium">Net</dt>
-                        <dd className="text-right font-medium text-popover-foreground">{formatPeso(columns[hover].net.toFixed(2))}</dd>
+                        <dd className="text-popover-foreground text-right font-medium">{formatPeso(columns[hover].net.toFixed(2))}</dd>
                     </dl>
                 </div>
             )}

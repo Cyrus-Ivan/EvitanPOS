@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { Variant } from '@/types';
 import { useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useEffect } from 'react';
 
 type Mode = 'set' | 'delta';
@@ -85,7 +86,7 @@ export default function StockAdjustDialog({
                             {variant ? (
                                 <>
                                     {itemName ? `${itemName} — ` : ''}
-                                    {variant.name} · current on-hand <span className="font-medium text-foreground tabular-nums">{current}</span>
+                                    {variant.name} · current on-hand <span className="text-foreground font-medium tabular-nums">{current}</span>
                                 </>
                             ) : null}
                         </DialogDescription>
@@ -120,11 +121,11 @@ export default function StockAdjustDialog({
                             placeholder={data.mode === 'set' ? 'e.g. 37' : 'e.g. -3 or 10'}
                         />
                         {deltaIsZero ? (
-                            <p className="text-sm text-destructive">Enter a positive number to add stock or a negative number to remove it.</p>
+                            <p className="text-destructive text-sm">Enter a positive number to add stock or a negative number to remove it.</p>
                         ) : (
                             resulting !== null && (
-                                <p className="text-sm text-muted-foreground">
-                                    New on-hand: <span className="font-medium tabular-nums text-foreground">{resulting}</span>
+                                <p className="text-muted-foreground text-sm">
+                                    New on-hand: <span className="text-foreground font-medium tabular-nums">{resulting}</span>
                                 </p>
                             )
                         )}
@@ -133,7 +134,12 @@ export default function StockAdjustDialog({
 
                     <div className="grid gap-2">
                         <Label htmlFor="adjust-notes">
-                            Notes {notesRequired ? <span className="text-muted-foreground">(required)</span> : <span className="text-muted-foreground">(optional)</span>}
+                            Notes{' '}
+                            {notesRequired ? (
+                                <span className="text-muted-foreground">(required)</span>
+                            ) : (
+                                <span className="text-muted-foreground">(optional)</span>
+                            )}
                         </Label>
                         <Textarea
                             id="adjust-notes"
@@ -150,7 +156,10 @@ export default function StockAdjustDialog({
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button disabled={processing || !canSubmit}>Save adjustment</Button>
+                        <Button disabled={processing || !canSubmit}>
+                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                            Save adjustment
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

@@ -17,7 +17,12 @@ const ALL = 'all';
 // Badge tone keyed on the action's top-level domain. Destructive actions
 // (archive / restore-over-data / password reset) read as warnings.
 function actionTone(action: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-    if (action.endsWith('.archived') || action === 'user.password_reset' || action.startsWith('backup.restored') || action === 'sale.defect.created') {
+    if (
+        action.endsWith('.archived') ||
+        action === 'user.password_reset' ||
+        action.startsWith('backup.restored') ||
+        action === 'sale.defect.created'
+    ) {
         return 'destructive';
     }
     if (action.startsWith('settings.') || action.startsWith('backup.')) {
@@ -55,8 +60,8 @@ function ValueBlock({ title, values }: { title: string; values: Record<string, u
     }
     return (
         <div className="min-w-0 flex-1">
-            <div className="mb-1 text-xs font-medium text-muted-foreground uppercase">{title}</div>
-            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{JSON.stringify(values, null, 2)}</pre>
+            <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">{title}</div>
+            <pre className="bg-muted overflow-x-auto rounded-md p-3 text-xs">{JSON.stringify(values, null, 2)}</pre>
         </div>
     );
 }
@@ -120,7 +125,7 @@ export default function AuditLogs({
                         </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">From</span>
+                        <span className="text-muted-foreground text-sm">From</span>
                         <Input
                             type="date"
                             value={filters.date_from ?? ''}
@@ -128,7 +133,7 @@ export default function AuditLogs({
                             onChange={(e) => applyFilters({ date_from: e.target.value || null })}
                             className="w-40"
                         />
-                        <span className="text-sm text-muted-foreground">To</span>
+                        <span className="text-muted-foreground text-sm">To</span>
                         <Input
                             type="date"
                             value={filters.date_to ?? ''}
@@ -140,7 +145,11 @@ export default function AuditLogs({
                 </div>
 
                 {entries.data.length === 0 ? (
-                    <EmptyState icon={ScrollText} title="No audit entries" description="Significant business actions will appear here as they happen." />
+                    <EmptyState
+                        icon={ScrollText}
+                        title="No audit entries"
+                        description="Significant business actions will appear here as they happen."
+                    />
                 ) : (
                     <div className="rounded-xl border">
                         <Table>
@@ -175,7 +184,7 @@ export default function AuditLogs({
                                                         )
                                                     ) : null}
                                                 </TableCell>
-                                                <TableCell className="tabular-nums whitespace-nowrap">{formatWhen(entry.created_at)}</TableCell>
+                                                <TableCell className="whitespace-nowrap tabular-nums">{formatWhen(entry.created_at)}</TableCell>
                                                 <TableCell>{entry.user?.name ?? entry.user?.username ?? 'System'}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={actionTone(entry.action)}>{actionLabel(entry.action)}</Badge>

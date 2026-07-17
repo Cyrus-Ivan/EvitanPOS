@@ -32,9 +32,7 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
                 <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
                     <div className="space-y-2">
                         <h1 className="text-xl font-medium">Something went wrong</h1>
-                        <p className="text-muted-foreground text-sm">
-                            The screen hit an unexpected error. Your data is safe — reload to continue.
-                        </p>
+                        <p className="text-muted-foreground text-sm">The screen hit an unexpected error. Your data is safe — reload to continue.</p>
                     </div>
                     <Button onClick={() => window.location.assign('/')}>Reload</Button>
                 </div>

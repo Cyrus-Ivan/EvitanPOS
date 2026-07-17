@@ -1,17 +1,17 @@
 import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import Pagination from '@/components/pagination';
-import ResetPasswordDialog from '@/components/users/reset-password-dialog';
-import RoleDialog from '@/components/users/role-dialog';
-import UserDialog from '@/components/users/user-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import ResetPasswordDialog from '@/components/users/reset-password-dialog';
+import RoleDialog from '@/components/users/role-dialog';
+import UserDialog from '@/components/users/user-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
-import { outranks } from '@/lib/roles';
 import AppLayout from '@/layouts/app-layout';
+import { outranks } from '@/lib/roles';
 import type { BreadcrumbItem, ManagedUser, Paginated, UserRole } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { KeyRound, UserCog, UsersRound } from 'lucide-react';
@@ -75,7 +75,8 @@ export default function UsersIndex({
         if (
             await confirm({
                 title: `Archive "${user.name ?? user.username}"?`,
-                description: 'They will be hidden from the active list but kept in Sales, Login History, and audit records. You can restore them later.',
+                description:
+                    'They will be hidden from the active list but kept in Sales, Login History, and audit records. You can restore them later.',
                 destructive: true,
                 confirmLabel: 'Archive',
             })
@@ -85,7 +86,13 @@ export default function UsersIndex({
     };
 
     const restoreUser = async (user: ManagedUser) => {
-        if (await confirm({ title: `Restore "${user.name ?? user.username}"?`, description: 'They will reappear in the active list.', confirmLabel: 'Restore' })) {
+        if (
+            await confirm({
+                title: `Restore "${user.name ?? user.username}"?`,
+                description: 'They will reappear in the active list.',
+                confirmLabel: 'Restore',
+            })
+        ) {
             router.patch(route('users.restore', user.id), {}, { preserveScroll: true });
         }
     };
@@ -176,7 +183,12 @@ export default function UsersIndex({
             </div>
 
             <UserDialog open={createOpen} onOpenChange={setCreateOpen} assignableRoles={assignableRoles} />
-            <RoleDialog open={roleTarget !== null} onOpenChange={(open) => !open && setRoleTarget(null)} user={roleTarget} assignableRoles={assignableRoles} />
+            <RoleDialog
+                open={roleTarget !== null}
+                onOpenChange={(open) => !open && setRoleTarget(null)}
+                user={roleTarget}
+                assignableRoles={assignableRoles}
+            />
             <ResetPasswordDialog open={resetTarget !== null} onOpenChange={(open) => !open && setResetTarget(null)} user={resetTarget} />
         </AppLayout>
     );

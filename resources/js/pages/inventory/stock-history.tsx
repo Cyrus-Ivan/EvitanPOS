@@ -119,7 +119,7 @@ export default function StockHistory({
                         </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">From</span>
+                        <span className="text-muted-foreground text-sm">From</span>
                         <Input
                             type="date"
                             value={filters.date_from ?? ''}
@@ -127,7 +127,7 @@ export default function StockHistory({
                             onChange={(e) => applyFilters({ date_from: e.target.value || null })}
                             className="w-40"
                         />
-                        <span className="text-sm text-muted-foreground">To</span>
+                        <span className="text-muted-foreground text-sm">To</span>
                         <Input
                             type="date"
                             value={filters.date_to ?? ''}
@@ -173,18 +173,24 @@ export default function StockHistory({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={entry.type === 'stock_adjustment' ? 'secondary' : 'outline'}>{movementLabel(entry)}</Badge>
+                                            <Badge variant={entry.type === 'stock_adjustment' ? 'secondary' : 'outline'}>
+                                                {movementLabel(entry)}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell
                                             className={`text-right tabular-nums ${
-                                                entry.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : entry.quantity < 0 ? 'text-destructive' : ''
+                                                entry.quantity > 0
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : entry.quantity < 0
+                                                      ? 'text-destructive'
+                                                      : ''
                                             }`}
                                         >
                                             {entry.quantity > 0 ? `+${entry.quantity}` : entry.quantity}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">{entry.resulting_snapshot}</TableCell>
                                         <TableCell>{entry.performed_by ?? '—'}</TableCell>
-                                        <TableCell className="max-w-xs truncate text-muted-foreground" title={entry.notes ?? undefined}>
+                                        <TableCell className="text-muted-foreground max-w-xs truncate" title={entry.notes ?? undefined}>
                                             {entry.notes ?? '—'}
                                         </TableCell>
                                     </TableRow>

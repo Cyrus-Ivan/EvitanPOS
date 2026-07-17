@@ -103,7 +103,7 @@ export default function LoginHistory({
                         </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">From</span>
+                        <span className="text-muted-foreground text-sm">From</span>
                         <Input
                             type="date"
                             value={filters.date_from ?? ''}
@@ -111,7 +111,7 @@ export default function LoginHistory({
                             onChange={(e) => applyFilters({ date_from: e.target.value || null })}
                             className="w-40"
                         />
-                        <span className="text-sm text-muted-foreground">To</span>
+                        <span className="text-muted-foreground text-sm">To</span>
                         <Input
                             type="date"
                             value={filters.date_to ?? ''}
@@ -123,7 +123,11 @@ export default function LoginHistory({
                 </div>
 
                 {entries.data.length === 0 ? (
-                    <EmptyState icon={History} title="No login events" description="Authentication events will appear here as users sign in and out." />
+                    <EmptyState
+                        icon={History}
+                        title="No login events"
+                        description="Authentication events will appear here as users sign in and out."
+                    />
                 ) : (
                     <div className="rounded-xl border">
                         <Table>

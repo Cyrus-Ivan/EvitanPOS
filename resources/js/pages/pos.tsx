@@ -13,7 +13,7 @@ import { formatPeso } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem, CartLine, DiscountType, Paginated, PaymentType, PosProduct } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Minus, Package, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { LoaderCircle, Minus, Package, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -367,7 +367,13 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                     </div>
 
                     <Button className="mt-4 w-full" size="lg" onClick={checkout} disabled={cart.length === 0 || processing || insufficientCash}>
-                        {processing ? 'Processing…' : `Checkout · ${formatPeso(total)}`}
+                        {processing ? (
+                            <>
+                                <LoaderCircle className="h-4 w-4 animate-spin" /> Processing…
+                            </>
+                        ) : (
+                            `Checkout · ${formatPeso(total)}`
+                        )}
                     </Button>
                 </Card>
             </div>

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ManagedUser, UserRole } from '@/types';
 import { useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useEffect } from 'react';
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -79,7 +80,10 @@ export default function RoleDialog({
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button disabled={processing}>Save</Button>
+                        <Button disabled={processing}>
+                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                            Save
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

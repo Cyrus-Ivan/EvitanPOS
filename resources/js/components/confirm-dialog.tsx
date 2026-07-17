@@ -1,20 +1,6 @@
-import {
-    createContext,
-    useCallback,
-    useContext,
-    useRef,
-    useState,
-    type ReactNode,
-} from 'react';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 
 export type ConfirmOptions = {
     title: string;
@@ -74,25 +60,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{options?.title}</DialogTitle>
-                        {options?.description && (
-                            <DialogDescription>
-                                {options.description}
-                            </DialogDescription>
-                        )}
+                        {options?.description && <DialogDescription>{options.description}</DialogDescription>}
                     </DialogHeader>
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => settle(false)}
-                        >
+                        <Button variant="outline" onClick={() => settle(false)}>
                             {options?.cancelLabel ?? 'Cancel'}
                         </Button>
-                        <Button
-                            variant={
-                                options?.destructive ? 'destructive' : 'default'
-                            }
-                            onClick={() => settle(true)}
-                        >
+                        <Button variant={options?.destructive ? 'destructive' : 'default'} onClick={() => settle(true)}>
                             {options?.confirmLabel ?? 'Confirm'}
                         </Button>
                     </DialogFooter>

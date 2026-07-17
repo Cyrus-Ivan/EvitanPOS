@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { DatabaseBackup, HardDrive, Upload } from 'lucide-react';
+import { DatabaseBackup, HardDrive, LoaderCircle, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Database Backup', href: '/backup' }];
@@ -84,7 +84,7 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
                             <HardDrive className="size-4" /> Back up to external drive
                         </Button>
                         <Button onClick={createBackup} disabled={processing}>
-                            <DatabaseBackup className="size-4" /> Create backup
+                            {processing ? <LoaderCircle className="size-4 animate-spin" /> : <DatabaseBackup className="size-4" />} Create backup
                         </Button>
                     </div>
                 </div>

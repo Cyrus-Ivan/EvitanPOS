@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ManagedUser } from '@/types';
 import { useForm } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useEffect } from 'react';
 
 /**
@@ -84,7 +85,10 @@ export default function ResetPasswordDialog({
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button disabled={processing}>Reset password</Button>
+                        <Button disabled={processing}>
+                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                            Reset password
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

@@ -24,9 +24,7 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
         return true;
     };
 
-    const visibleGroups = groups
-        .map((group) => ({ ...group, items: group.items.filter(isVisible) }))
-        .filter((group) => group.items.length > 0);
+    const visibleGroups = groups.map((group) => ({ ...group, items: group.items.filter(isVisible) })).filter((group) => group.items.length > 0);
 
     return (
         <>
