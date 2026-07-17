@@ -30,7 +30,7 @@ class BootSessionGuardTest extends TestCase
         // The session was stamped during an earlier run that ended uncleanly.
         $response = $this->actingAs($user)
             ->withSession(['boot_id' => 'previous-run'])
-            ->get(route('dashboard'));
+            ->get(route('pos'));
 
         $response->assertRedirect(route('login'));
         $this->assertGuest();
@@ -49,7 +49,7 @@ class BootSessionGuardTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['boot_id' => 'current-run'])
-            ->get(route('dashboard'))
+            ->get(route('pos'))
             ->assertOk();
 
         $this->assertAuthenticated();
@@ -63,7 +63,7 @@ class BootSessionGuardTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['boot_id' => 'anything'])
-            ->get(route('dashboard'))
+            ->get(route('pos'))
             ->assertOk();
 
         $this->assertAuthenticated();
@@ -78,11 +78,11 @@ class BootSessionGuardTest extends TestCase
         $this->post('/login', [
             'username' => $user->username,
             'password' => 'password',
-        ])->assertRedirect(route('dashboard', absolute: false));
+        ])->assertRedirect(route('pos', absolute: false));
 
         // The session cookie persists across requests in a test; a follow-up
         // request must not be treated as a stale-boot session.
-        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('pos'))->assertOk();
 
         $this->assertAuthenticated();
         $this->assertSame(

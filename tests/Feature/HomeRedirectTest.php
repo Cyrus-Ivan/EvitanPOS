@@ -9,10 +9,10 @@ class HomeRedirectTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_root_redirects_to_dashboard()
+    public function test_root_redirects_to_pos()
     {
         // Evitan POS has no public landing page; the desktop app opens on the
-        // dashboard, which in turn redirects guests to the login screen.
-        $this->get(route('home'))->assertRedirect('/dashboard');
+        // POS screen, which in turn redirects guests to the login screen.
+        $this->get(route('home'))->assertRedirect('/pos');
     }
 }

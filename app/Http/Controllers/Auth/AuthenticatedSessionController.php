@@ -41,7 +41,7 @@ class AuthenticatedSessionController extends Controller
         // out on its next request.
         $request->session()->put('boot_id', $sessions->currentBootId());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('pos', absolute: false));
     }
 
     /**

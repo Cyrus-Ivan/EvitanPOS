@@ -8,7 +8,6 @@ import {
     DatabaseBackup,
     FileSpreadsheet,
     History,
-    LayoutGrid,
     Package,
     PackageSearch,
     ReceiptText,
@@ -26,7 +25,6 @@ const mainNavGroups: NavGroup[] = [
     {
         title: 'Operations',
         items: [
-            { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
             { title: 'Point of Sale', url: '/pos', icon: ShoppingCart },
             { title: 'Sales', url: '/sales', icon: ReceiptText },
             { title: 'Inventory', url: '/inventory', icon: Package }, // view-only for Cashier
@@ -61,7 +59,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href="/dashboard" prefetch>
+                            <Link href="/pos" prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

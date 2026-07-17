@@ -23,7 +23,6 @@ class AuthorizationTest extends TestCase
     public static function cashierRoutes(): array
     {
         return [
-            'dashboard' => ['dashboard'],
             'pos' => ['pos'],
             'sales' => ['sales'],
             'inventory' => ['inventory'],
@@ -163,7 +162,7 @@ class AuthorizationTest extends TestCase
     {
         $this->actingAs(User::factory()->cashier()->create());
 
-        $this->get(route('dashboard'))->assertInertia(
+        $this->get(route('pos'))->assertInertia(
             fn ($page) => $page
                 ->where('auth.permissions.access-reports', false)
                 ->where('auth.permissions.manage-users', false)
@@ -172,7 +171,7 @@ class AuthorizationTest extends TestCase
 
         $this->actingAs(User::factory()->owner()->create());
 
-        $this->get(route('dashboard'))->assertInertia(
+        $this->get(route('pos'))->assertInertia(
             fn ($page) => $page
                 ->where('auth.permissions.access-reports', true)
                 ->where('auth.permissions.access-settings', true)

@@ -17,16 +17,13 @@ use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 // Desktop app entry point: no public marketing page. Send everyone to the
-// dashboard; the auth middleware bounces guests to the login screen.
-Route::redirect('/', '/dashboard')->name('home');
+// POS screen; the auth middleware bounces guests to the login screen.
+Route::redirect('/', '/pos')->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    // Cashier-level: available to every authenticated user. Each destination is
-    // a placeholder until its owning phase lands (see ROADMAP.md).
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    // Cashier-level: available to every authenticated user.
     // Point of Sale (Phase 8). Cashier-level — every authenticated user may sell.
     Route::get('pos', [PosController::class, 'index'])->name('pos');
     Route::get('pos/lookup', [PosController::class, 'lookup'])->name('pos.lookup');
@@ -57,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
     // Admin-level: Admins and the Owner.
     Route::middleware('role:admin')->group(function () {
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');     // Phase 12
+        Route::get('reports/export', [ReportsController::class, 'export'])->name('reports.export');
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs'); // Phase 15
 
         // User management (Phase 13). Which roles an actor may create/assign and
