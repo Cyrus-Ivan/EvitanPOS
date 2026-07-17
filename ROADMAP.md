@@ -4,7 +4,7 @@
 
 This roadmap prioritizes building a **working application as early as possible**, while minimizing refactoring. Each phase should produce a usable milestone before moving to the next.
 
-> **Status:** Phases 0–16 are **complete** (✅). Remaining: Phase 17 (UI Polish), Phase 18 (Testing), Phase 19 (Release Preparation). Confirm against `git log` and the code.
+> **Status:** Phases 0–17 are **complete** (✅). Remaining: Phase 18 (Testing), Phase 19 (Release Preparation). Confirm against `git log` and the code.
 
 ---
 
@@ -569,7 +569,7 @@ Recovery complete.
 
 ---
 
-# Phase 17 — UI Polish
+# Phase 17 — UI Polish ✅
 
 ## Goal
 
@@ -602,6 +602,15 @@ Accessibility
 **Milestone**
 
 Production-ready interface.
+
+**Status: done.** Highlights: styled Inertia error page for 403/404/500/503
+(419 → redirect-back + toast), React error boundary, boot-guard sign-out
+message on the login screen, spinner-while-processing on every submit button,
+POS keyboard support (global scan refocus, F9 / Enter checkout), a11y pass
+(`th scope`, dialog descriptions, aria-labels, low-stock text badge), dialog
+max-height, dead starter-kit header removed. Page-loading skeletons were
+**deliberately skipped** — all queries hit local SQLite and the Inertia
+progress bar covers slow cases; do not reopen in Phase 18/19.
 
 ---
 
