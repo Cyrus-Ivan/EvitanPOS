@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-The Laravel + React (Inertia) + NativePHP + SQLite app is **scaffolded and under active development**, building out the phases in `ROADMAP.md` in order. As of this writing the core commerce chain is complete through **Phase 8 (POS checkout)** — Phases 0–8 (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS) — plus the admin/ops track (**Phase 13 User Management, 14 Login History, 16 Database Backup**). Phase 10 (Returns/Refunds/Defects — void was dropped) has an authoritative design doc (`docs/returns-refunds-voids-design.md`) but is not yet implemented; Phase 15 (Audit Logs) is deliberately deferred to a single cross-cutting pass (write-paths carry `// TODO(Phase 15): audit ...` markers). Per-phase implementation notes live in the agent memory index, not here — treat this paragraph as approximate and confirm current progress against `git log` and the code.
+The Laravel + React (Inertia) + NativePHP + SQLite app is **feature-complete through Phase 16** of `ROADMAP.md`: the full commerce chain (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS, Transactions, Returns/Defects, Receipt Printing, Reports incl. PDF export) and the full admin/ops track (User Management, Login History, Audit Logs, Database Backup/Restore incl. external drive). Only **Phase 17 (UI Polish), 18 (Testing), and 19 (Release Preparation)** remain. Void was dropped from Phase 10 — after-sales events are returns and defects only. Per-phase implementation notes live in the agent memory index, not here — treat this paragraph as approximate and confirm current progress against `git log` and the code.
 
-`BRAINSTORM.md` is the full functional spec and `ROADMAP.md` is the phased build plan. Where `BRAINSTORM.md` and the code disagree on after-sales behavior, `docs/returns-refunds-voids-design.md` is the design of record.
+`BRAINSTORM.md` is the full functional spec and `ROADMAP.md` is the phased build plan. `docs/returns-refunds-voids-design.md` (after-sales) and `docs/receipt-printing-design.md` (printing) are the designs of record for their areas — where `BRAINSTORM.md`/`ROADMAP.md` disagree with them, the design docs win.
 
 Note: the product is named **Evitan POS**. Use "Evitan POS" for user-facing names unless told otherwise.
 
@@ -42,8 +42,8 @@ These rules span the entire codebase and are the reason the architecture looks t
 - Returns restore stock (new positive ledger entry); **defects do not** restore stock.
 
 **Identity & keys**
-- Every table uses a **UUID primary key**. Transaction numbers are a separate human-readable value (`YYYYMMDD-HHMMSS-000001` — date, wall-clock time, and a zero-padded sequence that resets daily; receipt number equals transaction number).
-- Uniqueness: username unique; **Item name unique** (case-insensitive, spanning archived items); SKU unique; barcode unique *when provided* (blank barcode is allowed and must not block selling). **Variant names are not unique** — different items may reuse "Small"/"Large".
+- Every table uses a **UUID primary key**. The transaction number is a separate human-readable value: a **continuous, gapless, zero-padded running serial** (`0000000001`, never resets — the BIR-compliant CRM/POS shape) that serves as both the internal transaction id and the customer-facing receipt number (there is no separate `receipt_number` column).
+- Uniqueness: username unique; **Item name unique** (case-insensitive, spanning archived items); SKU **required**, unique, and stored uppercase; barcode unique *when provided* (blank barcode is allowed and must not block selling). **Variant names are not unique** — different items may reuse "Small"/"Large".
 - Every Item must have **at least one Variant**. Stock, price, SKU, and barcode live on the Variant, not the Item. A single-product item keeps exactly one **unnamed** variant (`name` is null) — the "no variant" case; UI and reports fall back to the item name.
 
 **Roles & permissions** (Owner > Admin > Cashier)

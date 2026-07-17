@@ -6,15 +6,15 @@ The schema stays sync-compatible (UUID primary keys everywhere) so multi-branch 
 
 ## Highlights
 
-- **Point of sale** — product grid and search (name / SKU / barcode), barcode scanner support, cart with quantity editing, amount/percentage discounts, cash-received and automatic change, and POS keyboard shortcuts. Out-of-stock products stay visible but disabled.
+- **Point of sale** — product grid and search (name / SKU / barcode), barcode scanner support, cart with quantity editing, amount/percentage discounts, cash / cashless / others payment types, cash-received and automatic change, and an optional checkout comment. Out-of-stock products stay visible but disabled.
 - **Ledger-based inventory** — categories, items, and variants with an **append-only** inventory ledger as the single source of stock truth. Current stock is ledger-sum reconciled against a snapshot; **negative inventory is never allowed**. Low-stock thresholds highlight rows that need restocking.
 - **CSV import / export** — bulk catalog upsert by SKU with "replace stock count" and "add to current stock" modes, downloadable template, validation messages, and upload history. Every import funnels through the ledger.
-- **Immutable sales history** — completed transactions and line items never change. Selling price and item cost are snapshotted at time of sale, so later price edits never rewrite past sales. Transaction number is a human-readable `YYYYMMDD-HHMMSS-000001` serial (receipt number equals transaction number).
+- **Immutable sales history** — completed transactions and line items never change. Selling price and item cost are snapshotted at time of sale, so later price edits never rewrite past sales. The transaction number is a continuous, gapless, zero-padded running serial (`0000000001`, never resets — the BIR-compliant shape) that doubles as the receipt number.
 - **Returns & defects** — partial and multiple returns (restore stock) and defect write-offs (do not restore stock), recorded in a dedicated `sale_returns` family that references the original sale without ever mutating it.
 - **Receipt printing** — driverless ESC/POS straight to the device (USB / Bluetooth / network socket), 58mm and 80mm, auto-print, cash-drawer kick, and reprint. A printing failure **never** rolls back a completed sale.
-- **Reports** — daily and monthly sales that always recompute totals from sales minus returns minus defects.
+- **Reports** — daily / weekly / monthly / yearly sales on one page with drill-down buckets, a stacked-by-item net-sales chart, and PDF export. Totals are always recomputed from sales minus returns minus defects; COGS and profit are Owner-only.
 - **Roles & permissions** — Owner > Admin > Cashier, enforced at routes, actions, and UI. **Item cost is Owner-only** everywhere, including reports and API responses.
-- **Admin & ops** — user management (create / archive / reset password / change role), login history (login, logout, crash, forced logout, power loss), and Owner-only SQLite backup / restore with an automatic safety backup before every restore.
+- **Admin & ops** — user management (create / archive / reset password / change role), login history (login, logout, crash, forced logout, power loss), an immutable audit log of every significant action (Admin+ view, cost redacted for non-Owners), and Owner-only SQLite backup / restore — including to and from an external drive — with an automatic safety backup before every restore.
 
 ## Tech stack
 
@@ -88,7 +88,7 @@ Deeper documentation lives in the repo:
 
 ## Project status
 
-MVP under active development, building the `ROADMAP.md` phases in order. The core commerce chain is complete through **Phase 11 (Receipt Printing)** — Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS, Transactions, Returns/Defects, Printing — alongside the admin/ops track (User Management, Login History, Backup/Restore). Audit logging (Phase 15) is deferred to a single cross-cutting pass.
+MVP under active development, building the `ROADMAP.md` phases in order. **Feature-complete through Phase 16**: the full commerce chain (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS, Transactions, Returns/Defects, Printing, Reports) and the full admin/ops track (User Management, Login History, Audit Logs, Backup/Restore). Remaining: UI Polish, Testing, and Release Preparation (Phases 17–19).
 
 This summary is approximate — confirm current progress against `git log` and the code.
 

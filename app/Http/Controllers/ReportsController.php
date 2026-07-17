@@ -387,10 +387,11 @@ class ReportsController extends Controller
             if ($otherCents !== 0) {
                 $values[self::OTHER_KEY] = $this->pesos($otherCents);
             }
-            // (string) the bucket: PHP coerces a purely-numeric bucket key (the
-            // yearly '%Y' format, e.g. "2026") to an int, which would serialise as
-            // a JSON number and break the frontend's string handling. Cast values
-            // so an empty bucket serialises as {} rather than [].
+            // (string) the bucket: PHP coerces a purely-numeric bucket key
+            // (e.g. a bare-year format like "2026") to an int, which would
+            // serialise as a JSON number and break the frontend's string
+            // handling. No current SUB_FORMAT is hyphen-free, but keep the cast
+            // as a guard. Cast values so an empty bucket serialises as {} not [].
             $chartBuckets[] = ['bucket' => (string) $bucket, 'values' => (object) $values];
         }
 

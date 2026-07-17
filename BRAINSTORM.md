@@ -222,7 +222,7 @@ No colors.
 Fields
 
 * UUID
-* Product Name
+* Product Name (Unique, case-insensitive, spanning archived items)
 * Unit (Free Text)
 * Category (Nullable)
 * Description (Nullable)
@@ -231,6 +231,7 @@ Fields
 Rules
 
 * Unit is free text with a sensible character limit.
+* Item name is unique — case-insensitive, including archived items.
 * Items are archived instead of deleted.
 * Items remain visible in historical transactions.
 * Archived items are hidden from the default inventory list.
@@ -245,9 +246,9 @@ Every Item must contain at least one Variant.
 Fields
 
 * UUID
-* Variant Name
-* SKU (Nullable, Unique)
-* Barcode (Nullable, Unique)
+* Variant Name (Nullable — a single-product item keeps exactly one **unnamed** variant, the "no variant" case; UI and reports fall back to the item name)
+* SKU (Required, Unique, stored uppercase)
+* Barcode (Nullable, Unique when provided)
 * Selling Price
 * Item Cost (Nullable, Owner Only)
 * Low Stock Threshold
@@ -255,6 +256,7 @@ Fields
 
 Rules
 
+* Variant names are **not** unique — different items may reuse "Small"/"Large".
 * Barcode is optional.
 * Blank barcode does not prevent selling.
 * Search falls back to SKU or Product Name.
@@ -406,12 +408,12 @@ Sales consist of
 Transaction Number Format
 
 ```
-YYYYMMDD-HHMMSS-000001
+0000000001
 ```
 
-The calendar date, the wall-clock time of the sale, and a zero-padded sequence that resets every day.
+A **continuous, gapless, zero-padded running serial** that never resets (no date component — the timestamp lives in `created_at`). This supersedes the original `YYYYMMDD-HHMMSS-000001` daily-reset spec: a unique, consecutive, non-resetting serial is the shape a BIR-registered CRM/POS document number must take. Full BIR accreditation (ATP range/prefix, machine serial, VAT breakdown) is a deliberate future item — only the number shape is done.
 
-Receipt Number equals Transaction Number.
+The transaction number doubles as the receipt number; there is no separate receipt-number column.
 
 ---
 
@@ -420,8 +422,7 @@ Receipt Number equals Transaction Number.
 A transaction stores
 
 * UUID
-* Transaction Number
-* Receipt Number
+* Transaction Number (doubles as the receipt number)
 * Timestamp
 * Payment Type
 * Discount
@@ -429,11 +430,12 @@ A transaction stores
 * Total
 * Cash Received
 * Change
+* Comment (optional free text, captured once at checkout)
 
 Supported Payment Types
 
 * Cash
-* Online
+* Cashless (renamed from "Online", which read as an e-commerce order)
 * Others
 
 Split Payments are intentionally excluded from the MVP.
@@ -571,13 +573,19 @@ Instead
 Included
 
 * Daily Sales
+* Weekly Sales
 * Monthly Sales
+* Yearly Sales
+
+All on one page, switched by a period toggle, drilling into sub-buckets (a day → hours, a week/month → days, a year → months). Downloadable as PDF (includes a net-sales chart and a top-selling-items table).
 
 Reports always recompute totals using
 
 * Sales
 * Returns
 * Defects
+
+COGS and profit are Owner-only (omitted entirely for other roles).
 
 Historical transaction totals remain unchanged.
 
@@ -616,6 +624,7 @@ Supports
 
 * Backup SQLite Database
 * Restore SQLite Database
+* Backup to / restore from an external drive (destination picked via a native file dialog)
 
 Before restoring, the application should automatically create a backup of the current database.
 
@@ -655,7 +664,9 @@ Audit Logs are immutable.
 
 # Keyboard Shortcuts
 
-Keyboard shortcuts are available on the POS screen.
+> **Not yet implemented** — planned for Phase 17 (UI Polish).
+
+Keyboard shortcuts should be available on the POS screen.
 
 Buttons should visibly display their shortcut.
 
@@ -719,7 +730,8 @@ Historical records must continue to reference archived entities correctly.
 * One Owner only.
 * Owner cannot be deleted.
 * Username must be unique.
-* SKU must be unique.
+* Item name must be unique (case-insensitive, spanning archived items).
+* SKU is required, unique, and stored uppercase.
 * Barcode must be unique when provided.
 * Every Item requires at least one Variant.
 * Inventory never becomes negative.

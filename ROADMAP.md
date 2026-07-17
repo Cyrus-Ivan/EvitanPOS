@@ -4,9 +4,11 @@
 
 This roadmap prioritizes building a **working application as early as possible**, while minimizing refactoring. Each phase should produce a usable milestone before moving to the next.
 
+> **Status:** Phases 0–16 are **complete** (✅). Remaining: Phase 17 (UI Polish), Phase 18 (Testing), Phase 19 (Release Preparation). Confirm against `git log` and the code.
+
 ---
 
-# Phase 0 — Project Initialization
+# Phase 0 — Project Initialization ✅
 
 ## Goal
 
@@ -35,7 +37,7 @@ Application launches with navigation.
 
 ---
 
-# Phase 1 — Database Foundation
+# Phase 1 — Database Foundation ✅
 
 ## Goal
 
@@ -69,7 +71,7 @@ Database schema complete.
 
 ---
 
-# Phase 2 — Authentication
+# Phase 2 — Authentication ✅
 
 ## Goal
 
@@ -101,7 +103,7 @@ Secure authentication working.
 
 ---
 
-# Phase 3 — Authorization
+# Phase 3 — Authorization ✅
 
 ## Goal
 
@@ -138,7 +140,7 @@ Permissions complete.
 
 ---
 
-# Phase 4 — Settings
+# Phase 4 — Settings ✅
 
 ## Goal
 
@@ -159,7 +161,7 @@ Business identity configured.
 
 ---
 
-# Phase 5 — Inventory Foundation
+# Phase 5 — Inventory Foundation ✅
 
 ## Goal
 
@@ -195,7 +197,7 @@ Inventory management complete.
 
 ---
 
-# Phase 6 — Ledger System
+# Phase 6 — Ledger System ✅
 
 ## Goal
 
@@ -231,7 +233,7 @@ Inventory calculations complete.
 
 ---
 
-# Phase 7 — Inventory Import / Export
+# Phase 7 — Inventory Import / Export ✅
 
 ## Goal
 
@@ -262,7 +264,7 @@ Inventory migration tools complete.
 
 ---
 
-# Phase 8 — POS
+# Phase 8 — POS ✅
 
 ## Goal
 
@@ -301,7 +303,7 @@ Products can be sold.
 
 ---
 
-# Phase 9 — Transactions
+# Phase 9 — Transactions ✅
 
 ## Goal
 
@@ -315,9 +317,7 @@ Transaction Items
 
 Generate
 
-Transaction Number
-
-Receipt Number
+Transaction Number (a continuous, gapless, zero-padded running serial — `0000000001`, never resets; it doubles as the receipt number, there is no separate receipt-number column)
 
 Store
 
@@ -337,7 +337,7 @@ Sales become permanent.
 
 ---
 
-# Phase 10 — Returns, Refunds & Defects
+# Phase 10 — Returns, Refunds & Defects ✅
 
 ## Goal
 
@@ -400,17 +400,19 @@ Reprint
 
 Printing complete.
 
-**Status: done.** Driverless ESC/POS printing straight to the device (USB
-`/dev/usb/lp0`, Bluetooth `/dev/rfcomm0`) or a network socket — no CUPS/driver.
-58mm/80mm, auto-print (default on, toggleable), cash-drawer kick, and reprint
-(with a REPRINT banner). A print failure never rolls back the sale. Owner-only
-printer settings + test print live on the Business settings page. Design of
-record: `docs/receipt-printing-design.md`. Deferred (seams left open): OS-driver
-HTML printing and a libusb transport for driverless-USB-with-no-device-file.
+**Status: done.** Raw ESC/POS bytes generated in PHP, delivered by transport:
+device file (USB `/dev/usb/lp0`, Bluetooth `/dev/rfcomm0`), network socket
+(`ip:9100`), or the OS print queue in raw mode (`system` — the recommended path
+on macOS/Windows; CUPS `lp -o raw` or a bundled winspool RAW helper). 58mm/80mm,
+auto-print (default on, toggleable), cash-drawer kick, and reprint (with a
+REPRINT banner). A print failure never rolls back the sale. Owner-only printer
+settings + test print live on the Business settings page. Design of record:
+`docs/receipt-printing-design.md`. Deferred (seam left open): a libusb/WinUSB
+transport for a raw-USB printer with no device file and no OS queue.
 
 ---
 
-# Phase 12 — Reports
+# Phase 12 — Reports ✅
 
 ## Goal
 
@@ -436,9 +438,15 @@ instead of relying on stored totals.
 
 Reports complete.
 
+**Status: done.** Shipped beyond the minimum: Daily / Weekly / Monthly / Yearly
+on one page (period toggle + prev/next stepping, drill-down sub-buckets), a
+stacked-by-item net-sales SVG chart, Owner-only COGS/profit (with an un-costed
+sales split so null costs never inflate margin), and PDF export (dompdf) with a
+top-selling-items table. Everything recomputed from source tables.
+
 ---
 
-# Phase 13 — User Management
+# Phase 13 — User Management ✅
 
 ## Goal
 
@@ -471,7 +479,7 @@ Employee management complete.
 
 ---
 
-# Phase 14 — Login History
+# Phase 14 — Login History ✅
 
 ## Goal
 
@@ -507,7 +515,7 @@ Authentication auditing complete.
 
 ---
 
-# Phase 15 — Audit Logs
+# Phase 15 — Audit Logs ✅
 
 ## Goal
 
@@ -541,7 +549,7 @@ Business audit complete.
 
 ---
 
-# Phase 16 — Database Backup
+# Phase 16 — Database Backup ✅
 
 ## Goal
 

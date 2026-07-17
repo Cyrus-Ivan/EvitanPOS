@@ -1,8 +1,9 @@
 # Returns, Refunds & Defects — Authoritative Design
 
-> **Status:** Design of record. Future agents building **Phase 6 (Ledger)**,
-> **Phase 9 (Transactions)**, and **Phase 10 (Returns & Defects)** MUST implement the
-> schema and rules exactly as specified here. Referenced from `ROADMAP.md`.
+> **Status:** Design of record — **implemented** (Phase 10, commit `e24d844`, 2026-07-12,
+> plus audit wiring in Phase 15). The schema and rules below match the shipped code;
+> any future change to after-sales behavior must keep this document in sync.
+> Referenced from `ROADMAP.md`.
 >
 > **Void removed.** A void was a full reversal of an *untouched* transaction — which is
 > functionally identical to unselecting the item from the cart at the POS **before**
@@ -50,11 +51,11 @@ table `sale_return_items` / model `SaleReturnItem`.
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | uuid pk | |
-| `return_number` | string, **unique** | Human-readable `RET-YYYYMMDD-000001`, sequence resets daily. Reuse the same generator approach as `transaction_number`. |
+| `return_number` | string, **unique** | Human-readable `RET-YYYYMMDD-000001`, sequence resets daily (unlike `transaction_number`, which is a never-resetting BIR-shaped serial). |
 | `transaction_id` | uuid FK → `transactions` | `restrictOnDelete` |
 | `type` | string | `return \| defect` |
 | `reason` | text, nullable | |
-| `refund_payment_type` | string, nullable | `cash \| online \| others` — how money was returned; nullable for defect / no-cash |
+| `refund_payment_type` | string, nullable | `cash \| cashless \| others` — how money was returned; nullable for defect / no-cash |
 | `total_refund` | decimal(12,2), default 0 | Snapshot sum of line `refund_amount`. Convenience only — reports **recompute** from lines. |
 | `performed_by` | uuid FK → `users` | `restrictOnDelete` |
 | `created_at` | timestamp | **`created_at` only** (`UPDATED_AT = null`) — append-only / immutable, matching `inventory_ledger`. |
@@ -130,9 +131,9 @@ Result: fully returning every line of a transaction refunds exactly `transaction
 `inventory_ledger` already carries `type` (`sale|stock_adjustment`), `sale_type`
 (`sale|return|defect`), `reference_type`, `reference_id`.
 
-- **Extend allowed `reference_type`** to include `return` (currently
-  `transaction | manual_adjustment`). This is a string column, so only the migration
-  **comment** and validation change — no structural migration.
+- **Extend allowed `reference_type`** to include `return` (alongside
+  `transaction | manual_adjustment | csv_import`). This is a string column, so only the
+  migration **comment** and validation change — no structural migration.
 - Per `sale_return_item`:
   - **return** → insert a ledger row: `quantity = +qty`,
     `resulting_snapshot = prev + qty`, `type = 'sale'`, `sale_type = 'return'`,
@@ -177,10 +178,10 @@ Because there is **no production data** (pre-release; the dev DB is re-creatable
 
 ---
 
-## Permissions (default — confirm during Phase 10)
+## Permissions (as implemented)
 
 - Process **return**: Cashier and up (they work the POS).
-- Process **defect**: Admin and up (inventory write-off).
+- Process **defect**: Admin and up (inventory write-off) — elevated inside the controller by submitted `type`.
 - `cost` on `sale_return_items` stays **Owner-only** via `HidesCostFromNonOwners`.
 
 ---
@@ -189,18 +190,19 @@ Because there is **no production data** (pre-release; the dev DB is re-creatable
 
 - Reports **recompute**: `net sales = sales − returns − defects`, summing
   `sale_return_items` (never a single stored total), per `CLAUDE.md` → "Reporting".
-- Every return / defect writes an **`audit_logs`** entry (wired in Phase 15).
+- Every return / defect writes an **`audit_logs`** entry
+  (`sale.return.created` / `sale.defect.created`, wired in Phase 15 inside the atomic transaction).
 
 ---
 
-## Edge cases covered (checklist for the implementing agent)
+## Edge cases covered (all implemented — see `tests/Feature/Sales/SaleReturnTest.php`)
 
-- [ ] Multiple partial returns against one line never exceed sold quantity (cumulative quota).
-- [ ] Returns/defects share the **same** per-line quota (they both consume sold qty).
-- [ ] Full line return refunds exactly `line_paid(S)` (no cent drift); returning every line refunds exactly `transaction.total`.
-- [ ] Returns use the **captured** selling price/cost, never the current variant values.
-- [ ] Transaction-level discount apportioned into refunds.
-- [ ] Defect restores no stock but still writes a 0-movement ledger row.
-- [ ] `cost` hidden from non-Owners everywhere, including return records and reports.
-- [ ] All writes atomic (single DB transaction); quota re-checked inside it.
-- [ ] `sale_returns` / `sale_return_items` are append-only (no `updated_at`); no edit/delete path.
+- [x] Multiple partial returns against one line never exceed sold quantity (cumulative quota).
+- [x] Returns/defects share the **same** per-line quota (they both consume sold qty).
+- [x] Full line return refunds exactly `line_paid(S)` (no cent drift); returning every line refunds exactly `transaction.total`.
+- [x] Returns use the **captured** selling price/cost, never the current variant values.
+- [x] Transaction-level discount apportioned into refunds.
+- [x] Defect restores no stock but still writes a 0-movement ledger row.
+- [x] `cost` hidden from non-Owners everywhere, including return records and reports.
+- [x] All writes atomic (single DB transaction); quota re-checked inside it.
+- [x] `sale_returns` / `sale_return_items` are append-only (no `updated_at`); no edit/delete path.
