@@ -79,6 +79,7 @@ export default function ResetPasswordDialog({
                             required
                             autoComplete="new-password"
                         />
+                        <InputError message={errors.password_confirmation} />
                     </div>
 
                     <DialogFooter>

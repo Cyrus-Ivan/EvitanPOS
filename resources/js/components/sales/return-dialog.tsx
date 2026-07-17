@@ -79,6 +79,12 @@ export default function ReturnDialog({
     const selectedCount = Object.values(quantities).reduce((sum, q) => sum + q, 0);
     const canSubmit = selectedCount > 0;
 
+    // Server-side line failures are keyed lines.N.quantity etc. (only reachable
+    // on stale data, e.g. a concurrent return in another window), so surface the
+    // first nested message rather than dropping it.
+    const errorBag = errors as Record<string, string | undefined>;
+    const lineError = errorBag.lines ?? Object.entries(errorBag).find(([key]) => key.startsWith('lines.'))?.[1];
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
@@ -143,9 +149,7 @@ export default function ReturnDialog({
                         </Table>
                     </div>
 
-                    <InputError
-                        message={(errors as Record<string, string | undefined>).lines ?? (errors as Record<string, string | undefined>).type}
-                    />
+                    <InputError message={lineError ?? errorBag.type} />
 
                     {!isDefect && (
                         <div className="grid gap-2">

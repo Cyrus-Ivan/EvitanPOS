@@ -133,6 +133,7 @@ export default function UserDialog({
                             required
                             autoComplete="new-password"
                         />
+                        <InputError message={errors.password_confirmation} />
                     </div>
 
                     <DialogFooter>
