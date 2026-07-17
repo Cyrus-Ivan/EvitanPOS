@@ -33,6 +33,7 @@ class BootSessionGuardTest extends TestCase
             ->get(route('pos'));
 
         $response->assertRedirect(route('login'));
+        $response->assertSessionHas('status');
         $this->assertGuest();
         $this->assertSame(
             1,

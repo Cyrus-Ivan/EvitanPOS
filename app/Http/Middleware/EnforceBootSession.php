@@ -39,7 +39,10 @@ class EnforceBootSession
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login');
+            // invalidate() opened a fresh session, so the flash lands there
+            // and the login page can explain the sign-out.
+            return redirect()->route('login')
+                ->with('status', 'You were signed out because the app restarted. Please log in again.');
         }
 
         return $next($request);
