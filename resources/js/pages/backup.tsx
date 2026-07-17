@@ -62,7 +62,8 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
                 confirmLabel: 'Restore',
             })
         ) {
-            router.post(route('backup.restore'), { filename: backup.name }, { preserveScroll: true });
+            setProcessing(true);
+            router.post(route('backup.restore'), { filename: backup.name }, { preserveScroll: true, onFinish: () => setProcessing(false) });
         }
     };
 
@@ -117,7 +118,7 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
                                         <TableCell className="tabular-nums">{backup.size}</TableCell>
                                         <TableCell className="tabular-nums">{formatWhen(backup.created_at)}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={() => restoreBackup(backup)}>
+                                            <Button variant="ghost" size="sm" onClick={() => restoreBackup(backup)} disabled={processing}>
                                                 Restore
                                             </Button>
                                         </TableCell>
