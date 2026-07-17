@@ -1,6 +1,7 @@
 import '../css/app.css';
 
 import { ConfirmProvider } from '@/components/confirm-dialog';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/sonner';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -21,10 +22,12 @@ createInertiaApp({
         const root = createRoot(el);
 
         root.render(
-            <ConfirmProvider>
-                <App {...props} />
-                <Toaster />
-            </ConfirmProvider>,
+            <ErrorBoundary>
+                <ConfirmProvider>
+                    <App {...props} />
+                    <Toaster />
+                </ConfirmProvider>
+            </ErrorBoundary>,
         );
     },
     progress: {
