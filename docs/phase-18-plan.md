@@ -296,10 +296,10 @@ Tick items **before** committing; a session cut short commits only its ticked it
 - [x] **S7 — E2E workflows** *(2026-07-18 — 9 E2E specs green; commerce chain asserts report deltas so accumulated E2E state never skews the arithmetic)*
   - [x] Commerce-chain spec green (numbers match fixtures)
   - [x] Role-gating, error-page, ops-surface specs green
-- [ ] **S8 — Fix sessions**
-  - [ ] All Blocker/High findings closed
-  - [ ] All Medium findings closed or accepted
-  - [ ] Low findings dispositioned
+- [x] **S8 — Fix sessions** *(2026-07-18 — five sub-commits 4c8a2d6 / c28b7ee / b626506 / 097fdec / 9933bd5; suite 364 → 396)*
+  - [x] All Blocker/High findings closed *(F-01, F-14, F-26 fixed; F-05 is the Phase 19 release gate by design)*
+  - [x] All Medium findings closed or accepted *(F-02, F-09, F-13, F-15, F-17, F-20 fixed)*
+  - [x] Low findings dispositioned *(F-07/F-11/F-12/F-16/F-18/F-19/F-21/F-23/F-24 fixed; F-10/F-22/F-25 accepted with rationale)*
 - [ ] **S9 — Final sweep**
   - [ ] All six gates green; `/security-review` re-run clean
   - [ ] Phase 19 handoff list written
