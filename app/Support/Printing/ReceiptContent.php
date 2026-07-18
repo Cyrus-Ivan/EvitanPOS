@@ -44,7 +44,7 @@ class ReceiptContent
             $subtotal += $this->centavos($item->total);
 
             return [
-                'label' => $this->itemLabel($item),
+                'label' => $item->displayLabel(' - '),
                 'quantity' => (int) $item->quantity,
                 'unit_price' => (string) $item->selling_price,
                 'line_total' => (string) $item->total,
@@ -92,19 +92,6 @@ class ReceiptContent
         }
 
         return rtrim(rtrim(number_format((float) $transaction->discount, 2, '.', ''), '0'), '.').'%';
-    }
-
-    /**
-     * The display label for a sold line: item name, plus the variant name when
-     * the item has a named variant (a single-product item keeps an unnamed
-     * variant and falls back to the item name).
-     */
-    private function itemLabel(TransactionItem $item): string
-    {
-        $name = $item->variant?->item?->name ?? 'Unknown product';
-        $variantName = $item->variant?->name;
-
-        return trim($name.($variantName ? ' - '.$variantName : ''));
     }
 
     private function centavos(string|float|int|null $value): int

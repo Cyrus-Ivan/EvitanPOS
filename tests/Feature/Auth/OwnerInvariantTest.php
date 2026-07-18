@@ -63,14 +63,16 @@ class OwnerInvariantTest extends TestCase
 
     public function test_owner_cannot_delete_their_account_via_settings()
     {
+        // Self-deletion was removed for every role in Phase 18 (F-15) — the
+        // starter kit's destroy endpoint no longer exists at all, which
+        // enforces this invariant even more strictly than the old Owner guard.
         $owner = User::factory()->owner()->create();
 
-        $response = $this
-            ->actingAs($owner)
+        $this->actingAs($owner)
             ->from('/settings/profile')
-            ->delete('/settings/profile', ['password' => 'password']);
+            ->delete('/settings/profile', ['password' => 'password'])
+            ->assertStatus(405);
 
-        $response->assertRedirect('/settings/profile');
         $this->assertAuthenticated();
         $this->assertNotNull($owner->fresh());
     }

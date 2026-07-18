@@ -140,6 +140,14 @@ class DatabaseBackupManager
             throw new RuntimeException('The selected file is not a valid SQLite database.');
         }
 
+        // Any valid SQLite file passes the magic check — including some other
+        // app's database, which would replace ours and brick the app with no
+        // in-app way back. Require the core Evitan POS schema before touching
+        // the live file.
+        if (! $this->looksLikeEvitanSchema($source)) {
+            throw new RuntimeException('The selected file is not an Evitan POS database backup.');
+        }
+
         // Safety net: snapshot the current database before overwriting it, so the
         // restore itself can be rolled back.
         if (is_file($this->databasePath)) {
@@ -163,6 +171,33 @@ class DatabaseBackupManager
         }
 
         return $this->backupDirectory.'/'.$filename;
+    }
+
+    /**
+     * The candidate must contain the tables every Evitan POS database has had
+     * since Phase 1 — read-only, before the live file is overwritten.
+     */
+    private function looksLikeEvitanSchema(string $path): bool
+    {
+        $required = ['users', 'transactions', 'inventory_ledger', 'settings', 'variants'];
+
+        try {
+            // Plain open (no readonly flag — deprecated constant churn across
+            // PHP versions); the method only SELECTs, so the file is untouched.
+            $pdo = new \PDO('sqlite:'.$path, options: [
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            ]);
+
+            $placeholders = implode(',', array_fill(0, count($required), '?'));
+            $statement = $pdo->prepare(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ({$placeholders})",
+            );
+            $statement->execute($required);
+
+            return (int) $statement->fetchColumn() === count($required);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function looksLikeSqlite(string $path): bool

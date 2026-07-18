@@ -23,8 +23,9 @@ class DatabaseBackupManagerTest extends TestCase
         $this->dbPath = $this->workDir.'/nativephp.sqlite';
 
         mkdir($this->workDir, 0755, true);
-        // A minimal file with the SQLite magic header stands in for a real DB.
-        file_put_contents($this->dbPath, "SQLite format 3\0original-data");
+        // A real (minimal) Evitan-shaped SQLite DB: restore now validates the
+        // schema, so magic-header stand-ins no longer pass.
+        $this->writeEvitanDb($this->dbPath, 'original-data');
     }
 
     protected function tearDown(): void
@@ -32,6 +33,24 @@ class DatabaseBackupManagerTest extends TestCase
         $this->deleteTree($this->workDir);
 
         parent::tearDown();
+    }
+
+    /**
+     * A real SQLite file carrying the core Evitan POS tables (the restore
+     * schema check requires them) and a marker row whose text is findable in
+     * the raw bytes, preserving the string-based content assertions.
+     */
+    private function writeEvitanDb(string $path, string $marker): void
+    {
+        if (is_file($path)) {
+            unlink($path);
+        }
+        $pdo = new \PDO('sqlite:'.$path);
+        foreach (['users', 'transactions', 'inventory_ledger', 'settings', 'variants', 'marker'] as $table) {
+            $pdo->exec("CREATE TABLE {$table} (id TEXT)");
+        }
+        $pdo->exec("INSERT INTO marker (id) VALUES ('{$marker}')");
+        unset($pdo);
     }
 
     private function manager(): DatabaseBackupManager
@@ -111,7 +130,7 @@ class DatabaseBackupManagerTest extends TestCase
 
         // An external file standing in for a backup on a USB drive.
         $external = $this->workDir.'/external-backup.sqlite';
-        file_put_contents($external, "SQLite format 3\0external-data");
+        $this->writeEvitanDb($external, 'external-data');
 
         $manager->restoreFromPath($external);
 
@@ -131,6 +150,21 @@ class DatabaseBackupManagerTest extends TestCase
         file_put_contents($external, 'not a database');
 
         $this->expectException(RuntimeException::class);
+
+        $this->manager()->restoreFromPath($external);
+    }
+
+    public function test_restore_from_path_rejects_a_foreign_sqlite_database(): void
+    {
+        // Perfectly valid SQLite, but some other app's schema: restoring it
+        // would brick the POS, so it must be refused before the swap.
+        $external = $this->workDir.'/foreign.sqlite';
+        $pdo = new \PDO('sqlite:'.$external);
+        $pdo->exec('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)');
+        unset($pdo);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('not an Evitan POS database backup');
 
         $this->manager()->restoreFromPath($external);
     }

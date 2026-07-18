@@ -130,7 +130,7 @@ class ProcessSaleReturn
 
             if ($newQty < 1 || $already + $newQty > $sold->quantity) {
                 throw ValidationException::withMessages([
-                    'lines' => "Return quantity exceeds what remains for {$this->soldLabel($sold)}.",
+                    'lines' => "Return quantity exceeds what remains for {$sold->displayLabel()}.",
                 ]);
             }
 
@@ -257,15 +257,6 @@ class ProcessSaleReturn
         }
 
         return (int) round($linePaid * $newQty / $sold->quantity);
-    }
-
-    private function soldLabel(TransactionItem $sold): string
-    {
-        $sold->loadMissing('variant.item:id,name');
-        $name = $sold->variant?->item?->name ?? 'this item';
-        $variantName = $sold->variant?->name;
-
-        return trim($name.($variantName ? ' — '.$variantName : ''));
     }
 
     private function centavos(string|float|int $value): int

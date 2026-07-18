@@ -141,16 +141,6 @@ class PosController extends Controller
             }
         }
 
-        $this->audit->record(
-            action: 'pos.sale.created',
-            auditable: $transaction,
-            description: "Recorded sale {$transaction->transaction_number}.",
-            new: [
-                'transaction_number' => $transaction->transaction_number,
-                'total' => $transaction->total,
-            ],
-        );
-
         $number = $transaction->transaction_number;
 
         // Auto-print (Phase 11). The sale is already committed above; printing is
@@ -314,6 +304,20 @@ class PosController extends Controller
                 ]);
             }
         }
+
+        // Audited inside the same transaction as the sale (parity with
+        // ProcessSaleReturn): either both commit or neither — a sale can never
+        // exist without its audit row, and an audit failure can never 500 a
+        // sale that already committed.
+        $this->audit->record(
+            action: 'pos.sale.created',
+            auditable: $transaction,
+            description: "Recorded sale {$transaction->transaction_number}.",
+            new: [
+                'transaction_number' => $transaction->transaction_number,
+                'total' => $transaction->total,
+            ],
+        );
 
         return $transaction;
     }

@@ -42,6 +42,26 @@ class TransactionItem extends Model
     }
 
     /**
+     * The display label for this sold line: item name, plus the variant name
+     * when the item has a named variant (a single-product item keeps an
+     * unnamed variant and falls back to the item name). The single source for
+     * every surface that names a sold line — sales pages, receipts, return
+     * validation messages — so they can never drift apart.
+     *
+     * @param  string  $separator  Receipts pass ' - ' (the ESC/POS character
+     *                             set has no em-dash); screens use the default.
+     */
+    public function displayLabel(string $separator = ' — '): string
+    {
+        $this->loadMissing('variant.item:id,name');
+
+        $name = $this->variant?->item?->name ?? 'Unknown product';
+        $variantName = $this->variant?->name;
+
+        return trim($name.($variantName ? $separator.$variantName : ''));
+    }
+
+    /**
      * @return BelongsTo<Transaction, $this>
      */
     public function transaction(): BelongsTo

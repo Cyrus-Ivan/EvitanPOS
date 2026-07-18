@@ -28,7 +28,7 @@ class DatabaseBackupTest extends TestCase
         $this->dbPath = $this->workDir.'/nativephp.sqlite';
 
         mkdir($this->workDir, 0755, true);
-        file_put_contents($this->dbPath, "SQLite format 3\0live-data");
+        $this->writeEvitanDb($this->dbPath, 'live-data');
 
         // Point the controller's manager at throwaway paths so the real (and
         // in-memory test) database is never touched.
@@ -81,6 +81,23 @@ class DatabaseBackupTest extends TestCase
         });
     }
 
+    /**
+     * A real SQLite file carrying the core Evitan POS tables (the restore
+     * schema check requires them) and a marker row findable in the raw bytes.
+     */
+    private function writeEvitanDb(string $path, string $marker): void
+    {
+        if (is_file($path)) {
+            unlink($path);
+        }
+        $pdo = new \PDO('sqlite:'.$path);
+        foreach (['users', 'transactions', 'inventory_ledger', 'settings', 'variants', 'marker'] as $table) {
+            $pdo->exec("CREATE TABLE {$table} (id TEXT)");
+        }
+        $pdo->exec("INSERT INTO marker (id) VALUES ('{$marker}')");
+        unset($pdo);
+    }
+
     public function test_owner_can_view_the_backup_page(): void
     {
         $this->actingAs(User::factory()->owner()->create())
@@ -106,7 +123,7 @@ class DatabaseBackupTest extends TestCase
         // Create a backup of the current live data, then change the live file.
         $this->actingAs($owner)->post(route('backup.store'));
         $backupName = basename((string) glob($this->backupDir.'/backup-*.sqlite')[0]);
-        file_put_contents($this->dbPath, "SQLite format 3\0changed-data");
+        $this->writeEvitanDb($this->dbPath, 'changed-data');
 
         $this->actingAs($owner)
             ->post(route('backup.restore'), ['filename' => $backupName])
@@ -158,7 +175,7 @@ class DatabaseBackupTest extends TestCase
     public function test_owner_can_restore_from_an_external_file_with_a_pre_restore_backup(): void
     {
         $external = $this->workDir.'/external-backup.sqlite';
-        file_put_contents($external, "SQLite format 3\0external-data");
+        $this->writeEvitanDb($external, 'external-data');
         $this->fakePicker(null, $external);
 
         $this->actingAs(User::factory()->owner()->create())

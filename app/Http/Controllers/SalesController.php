@@ -115,7 +115,7 @@ class SalesController extends Controller
                 'items' => $transaction->items->map(function (TransactionItem $item) use ($canViewCost) {
                     $line = [
                         'id' => $item->id,
-                        'label' => $this->itemLabel($item),
+                        'label' => $item->displayLabel(),
                         'quantity' => $item->quantity,
                         'selling_price' => $item->selling_price,
                         'discount' => $item->discount,
@@ -148,7 +148,7 @@ class SalesController extends Controller
                     'items' => $saleReturn->items->map(function (SaleReturnItem $line) use ($canViewCost) {
                         $row = [
                             'id' => $line->id,
-                            'label' => $line->sourceItem ? $this->itemLabel($line->sourceItem) : 'Unknown product',
+                            'label' => $line->sourceItem ? $line->sourceItem->displayLabel() : 'Unknown product',
                             'quantity' => $line->quantity,
                             'refund_amount' => $line->refund_amount,
                         ];
@@ -195,19 +195,6 @@ class SalesController extends Controller
             'type' => 'success',
             'message' => "Receipt {$transaction->transaction_number} sent to the printer.",
         ]);
-    }
-
-    /**
-     * The display label for a sold line: item name, plus the variant name when
-     * the item has named variants (a single-product item keeps an unnamed
-     * variant and falls back to the item name).
-     */
-    private function itemLabel(TransactionItem $item): string
-    {
-        $name = $item->variant?->item?->name ?? 'Unknown product';
-        $variantName = $item->variant?->name;
-
-        return trim($name.($variantName ? ' — '.$variantName : ''));
     }
 
     /**

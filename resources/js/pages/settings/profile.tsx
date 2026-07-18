@@ -1,13 +1,7 @@
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Transition } from '@headlessui/react';
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { Head, usePage } from '@inertiajs/react';
 
-import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
@@ -20,21 +14,16 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+/**
+ * Read-only identity view. Accounts are provisioned and managed through User
+ * Management (Phase 13) — names are immutable after creation and users are
+ * archived, never self-deleted — so the profile offers no edit or delete.
+ * Password changes live in Settings → Password.
+ */
 export default function Profile() {
     const { auth } = usePage<SharedData>().props;
     // The profile page renders behind the `auth` layout, so the user is present.
     const user = auth.user!;
-
-    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
-        name: user.name ?? '',
-        username: user.username,
-    });
-
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-
-        patch(route('profile.update'));
-    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -42,61 +31,21 @@ export default function Profile() {
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Profile information" description="Update your name and username" />
+                    <HeadingSmall
+                        title="Profile information"
+                        description="Your account identity. Contact an administrator to change it."
+                    />
 
-                    <form onSubmit={submit} className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" className="mt-1 block w-full" value={user.name ?? ''} readOnly disabled />
+                    </div>
 
-                            <Input
-                                id="name"
-                                className="mt-1 block w-full"
-                                value={data.name}
-                                onChange={(e) => setData('name', e.target.value)}
-                                required
-                                autoComplete="name"
-                                placeholder="Full name"
-                            />
-
-                            <InputError className="mt-2" message={errors.name} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="username">Username</Label>
-
-                            <Input
-                                id="username"
-                                className="mt-1 block w-full"
-                                value={data.username}
-                                onChange={(e) => setData('username', e.target.value)}
-                                required
-                                autoComplete="username"
-                                placeholder="Username"
-                            />
-
-                            <InputError className="mt-2" message={errors.username} />
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <Button disabled={processing}>
-                                {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                                Save
-                            </Button>
-
-                            <Transition
-                                show={recentlySuccessful}
-                                enter="transition ease-in-out"
-                                enterFrom="opacity-0"
-                                leave="transition ease-in-out"
-                                leaveTo="opacity-0"
-                            >
-                                <p className="text-sm text-neutral-600">Saved</p>
-                            </Transition>
-                        </div>
-                    </form>
+                    <div className="grid gap-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input id="username" className="mt-1 block w-full" value={user.username} readOnly disabled />
+                    </div>
                 </div>
-
-                <DeleteUser />
             </SettingsLayout>
         </AppLayout>
     );
