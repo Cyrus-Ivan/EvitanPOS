@@ -124,9 +124,10 @@ class PosController extends Controller
 
         $transaction = null;
 
-        // The transaction_number carries a daily sequence derived from a count;
-        // under concurrency two sales can collide, which the UNIQUE index turns
-        // into a QueryException. Retry a few times with a fresh number.
+        // The transaction_number is a continuous serial derived from the highest
+        // committed one; under concurrency two sales can collide, which the
+        // UNIQUE index turns into a QueryException. Retry a few times with a
+        // fresh number.
         for ($attempt = 1; ; $attempt++) {
             try {
                 $transaction = DB::transaction(fn () => $this->persistSale($data, $lines, $request));

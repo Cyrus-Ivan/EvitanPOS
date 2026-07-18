@@ -11,7 +11,9 @@ use App\Models\SaleReturn;
  * the human-readable receipt shape. Unlike the never-resetting transaction serial,
  * returns are scoped and counted per calendar day.
  *
- * The sequence is derived from today's row count, so concurrency safety does not
+ * The sequence continues from today's highest issued number (MAX over the
+ * number itself, not a row count — a count would collide for the rest of the
+ * day if a row were ever lost; MAX self-heals). Concurrency safety does not
  * live here: the caller wraps generate + insert in a bounded retry and leans on
  * the `return_number` UNIQUE index as the integrity backstop (SQLite serializes
  * writers anyway).
@@ -23,8 +25,15 @@ class SaleReturnNumberGenerator
 
     public function next(): string
     {
-        $sequence = SaleReturn::query()->whereDate('created_at', today())->count() + 1;
+        $prefix = 'RET-'.today()->format('Ymd').'-';
 
-        return sprintf('RET-%s-%0'.self::PAD_WIDTH.'d', today()->format('Ymd'), $sequence);
+        // Fixed-width zero padding makes the lexicographic MAX the numeric MAX.
+        $highest = (string) SaleReturn::query()
+            ->where('return_number', 'like', $prefix.'%')
+            ->max('return_number');
+
+        $sequence = (int) substr($highest, -self::PAD_WIDTH) + 1;
+
+        return sprintf('%s%0'.self::PAD_WIDTH.'d', $prefix, $sequence);
     }
 }

@@ -14,9 +14,11 @@ use App\Models\Transaction;
  * number serves as both the internal transaction id and the customer-facing
  * receipt number.
  *
- * The sequence is derived from the row count, so concurrency safety does not
- * live here: the caller wraps generate + insert in a bounded retry and leans on
- * the `transaction_number` UNIQUE index as the integrity backstop (there is no
+ * The sequence continues from the highest committed serial (MAX, not a row
+ * count: a count would collide forever if a row were ever lost to manual SQL or
+ * a partial restore — MAX self-heals). Concurrency safety does not live here:
+ * the caller wraps generate + insert in a bounded retry and leans on the
+ * `transaction_number` UNIQUE index as the integrity backstop (there is no
  * counter row to lock; SQLite serializes writers anyway). Committed serials stay
  * gapless because a rolled-back sale never claims a number.
  *
@@ -31,8 +33,9 @@ class TransactionNumberGenerator
 
     public function next(): string
     {
-        $sequence = Transaction::query()->count() + 1;
+        // Fixed-width zero padding makes the lexicographic MAX the numeric MAX.
+        $highest = (string) Transaction::query()->max('transaction_number');
 
-        return sprintf('%0'.self::PAD_WIDTH.'d', $sequence);
+        return sprintf('%0'.self::PAD_WIDTH.'d', (int) $highest + 1);
     }
 }

@@ -101,6 +101,69 @@ class TransactionNumberIntegrityTest extends TestCase
         );
     }
 
+    public function test_serials_self_heal_after_a_hand_deleted_row(): void
+    {
+        $cashier = User::factory()->cashier()->create();
+        $variant = $this->sellable(price: 10, stock: 10);
+
+        foreach (range(1, 3) as $i) {
+            $this->checkout($cashier, $variant, 1)->assertSessionHasNoErrors();
+        }
+
+        // Simulate out-of-band row loss (manual SQL against the file): the
+        // immutability triggers must come down for the simulation, exactly as
+        // they would not exist for someone editing the DB with another tool.
+        \Illuminate\Support\Facades\DB::unprepared('DROP TRIGGER transactions_immutable_delete');
+        \Illuminate\Support\Facades\DB::unprepared('DROP TRIGGER transaction_items_immutable_delete');
+        \Illuminate\Support\Facades\DB::table('transactions')->where('transaction_number', '0000000002')->delete();
+
+        // A MAX-based serial continues from the highest committed number — a
+        // count-based one would recompute #3, collide with the surviving row
+        // forever, and brick every future checkout.
+        $this->checkout($cashier, $variant, 1)->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['0000000001', '0000000003', '0000000004'],
+            Transaction::query()->orderBy('transaction_number')->pluck('transaction_number')->all(),
+        );
+    }
+
+    public function test_collision_retry_claims_a_fresh_number(): void
+    {
+        $cashier = User::factory()->cashier()->create();
+        $variant = $this->sellable(price: 10, stock: 10);
+
+        // An existing sale holds serial #1. Seeded directly (not via a request)
+        // because the router caches the controller — and with it the injected
+        // generator — after the first dispatch, so the fake below must be bound
+        // before any checkout request runs.
+        Transaction::factory()->create(['transaction_number' => '0000000001', 'user_id' => $cashier->id]);
+
+        // A generator that first hands out the already-taken number (the shape
+        // of a concurrency race) and only then computes a real one: checkout
+        // must absorb the UNIQUE violation and succeed on the retry.
+        $fake = new class extends \App\Support\Sales\TransactionNumberGenerator
+        {
+            public int $calls = 0;
+
+            public function next(): string
+            {
+                $this->calls++;
+
+                return $this->calls === 1 ? '0000000001' : parent::next();
+            }
+        };
+        $this->app->instance(\App\Support\Sales\TransactionNumberGenerator::class, $fake);
+
+        $this->checkout($cashier, $variant, 1)->assertSessionHasNoErrors();
+
+        $this->assertSame(2, $fake->calls);
+        $this->assertSame(
+            ['0000000001', '0000000002'],
+            Transaction::query()->orderBy('transaction_number')->pluck('transaction_number')->all(),
+        );
+    }
+
     public function test_failed_checkout_rolls_back_stock_and_items_with_the_serial(): void
     {
         $cashier = User::factory()->cashier()->create();
