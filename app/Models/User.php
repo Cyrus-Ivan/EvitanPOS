@@ -42,7 +42,7 @@ class User extends Authenticatable
     /**
      * Get the attributes that should be cast.
      *
-     * @return array<string, string>
+     * @return array{password: string, role: class-string<UserRole>}
      */
     protected function casts(): array
     {

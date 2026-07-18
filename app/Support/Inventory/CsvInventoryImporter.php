@@ -9,6 +9,7 @@ use App\Models\ImportHistory;
 use App\Models\Item;
 use App\Models\User;
 use App\Models\Variant;
+use App\Rules\SpreadsheetSafeName;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -274,6 +275,15 @@ class CsvInventoryImporter
             ] as $label => $value) {
                 if (mb_strlen($value) > self::MAX_LENGTHS[$label]) {
                     $messages[] = $label.' must be '.self::MAX_LENGTHS[$label].' characters or fewer.';
+                }
+            }
+
+            // Formula-injection guard (F-16): these cells round-trip through the
+            // CSV export, so they must never begin with a spreadsheet formula
+            // trigger. Mirrors the SpreadsheetSafeName rule on the forms.
+            foreach (['Product' => $product, 'Variant' => $variantName, 'Category' => $category] as $label => $value) {
+                if ($value !== '' && ! SpreadsheetSafeName::isSafe($value)) {
+                    $messages[] = $label.' may not start with "=", "+", "-" or "@".';
                 }
             }
 

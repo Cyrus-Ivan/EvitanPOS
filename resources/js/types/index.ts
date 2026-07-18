@@ -42,7 +42,6 @@ export interface FlashToast {
 
 export interface SharedData {
     name: string;
-    quote: { message: string; author: string };
     auth: Auth;
     flash: { toast?: FlashToast | null };
     [key: string]: unknown;

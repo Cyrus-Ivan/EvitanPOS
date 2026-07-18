@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Models\Item;
+use App\Rules\SpreadsheetSafeName;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -32,7 +33,7 @@ abstract class ItemRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', new SpreadsheetSafeName],
             'unit' => ['required', 'string', 'max:50'],
             'category_id' => ['nullable', 'string', 'exists:categories,id'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -46,7 +47,7 @@ abstract class ItemRequest extends FormRequest
             $id = is_array($variant) ? ($variant['id'] ?? null) : null;
 
             $rules["variants.$index.id"] = ['nullable', 'string', 'exists:variants,id'];
-            $rules["variants.$index.name"] = ['nullable', 'string', 'max:255'];
+            $rules["variants.$index.name"] = ['nullable', 'string', 'max:255', new SpreadsheetSafeName];
             $rules["variants.$index.sku"] = ['required', 'string', 'max:255', Rule::unique('variants', 'sku')->ignore($id)];
             $rules["variants.$index.barcode"] = ['nullable', 'string', 'max:255', Rule::unique('variants', 'barcode')->ignore($id)];
             $rules["variants.$index.selling_price"] = ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'];

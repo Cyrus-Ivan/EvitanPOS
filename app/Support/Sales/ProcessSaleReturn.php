@@ -82,8 +82,11 @@ class ProcessSaleReturn
         ?string $refundPaymentType,
         User $performedBy,
     ): SaleReturn {
+        // Explicit stable order: the last line absorbs the apportionment
+        // remainder, so the order must be identical on every later return
+        // event — never left to SQLite's incidental row order.
         /** @var Collection<string, TransactionItem> $soldLines */
-        $soldLines = $transaction->items()->get()->keyBy('id');
+        $soldLines = $transaction->items()->orderBy('id')->get()->keyBy('id');
 
         if ($soldLines->isEmpty()) {
             throw ValidationException::withMessages([

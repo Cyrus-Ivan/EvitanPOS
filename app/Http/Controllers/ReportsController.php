@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\NormalizesDateFilter;
 use App\Models\Transaction;
 use App\Support\Settings\BusinessSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -36,6 +37,8 @@ use Inertia\Response;
  */
 class ReportsController extends Controller
 {
+    use NormalizesDateFilter;
+
     /**
      * The drill-down (sub-bucket) SQLite strftime format per selected period —
      * one level finer than the selection itself, so a single period still yields
@@ -404,7 +407,7 @@ class ReportsController extends Controller
      * the item's current name. Mirrors {@see self::uncostedRevenueByBucket} but
      * grouped by item.
      *
-     * @return Collection<int, object>
+     * @return Collection<int, \stdClass>
      */
     private function itemRevenueByBucket(string $format, Carbon $from, Carbon $to): Collection
     {
@@ -430,7 +433,7 @@ class ReportsController extends Controller
      * (returns and defects each reduce net), keyed by the event date, with the
      * item's current name.
      *
-     * @return Collection<int, object>
+     * @return Collection<int, \stdClass>
      */
     private function itemRefundByBucket(string $format, Carbon $from, Carbon $to): Collection
     {
@@ -643,22 +646,6 @@ class ReportsController extends Controller
         $value = (string) $value;
 
         return array_key_exists($value, self::SUB_FORMATS) ? $value : 'daily';
-    }
-
-    /**
-     * Parse a date filter param, discarding anything unparseable, else null.
-     */
-    private function normalizeDate(mixed $value): ?Carbon
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     /** Money (peso decimal string/number) → integer centavos, drift-free. */

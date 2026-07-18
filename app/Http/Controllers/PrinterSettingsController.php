@@ -50,8 +50,6 @@ class PrinterSettingsController extends Controller
      * connection. Only works inside the NativePHP runtime (the Electron bridge
      * backs {@see System::printers()}); under `artisan serve` there is no bridge,
      * so this returns an empty list and the UI falls back to manual entry.
-     *
-     * @return JsonResponse<array{printers: list<array{name: string, label: string}>}>
      */
     public function printers(): JsonResponse
     {

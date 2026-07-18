@@ -38,7 +38,9 @@ return [
             'database' => env('DB_DATABASE', database_path('nativephp.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
+            // Wait for a competing writer instead of failing SQLITE_BUSY
+            // immediately — NativePHP runs several PHP workers on one file.
+            'busy_timeout' => 5000,
             'journal_mode' => null,
             'synchronous' => null,
         ],

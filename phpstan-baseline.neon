@@ -49,32 +49,8 @@ parameters:
 			path: app/Http/Controllers/PosController.php
 
 		-
-			message: '#^PHPDoc tag @return contains generic type Illuminate\\Http\\JsonResponse\<array\<string, list\<array\<string, string\>\>\>\> but class Illuminate\\Http\\JsonResponse is not generic\.$#'
-			identifier: generics.notGeneric
-			count: 1
-			path: app/Http/Controllers/PrinterSettingsController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\ReportsController\:\:itemRefundByBucket\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, stdClass\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/ReportsController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\ReportsController\:\:itemRevenueByBucket\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, stdClass\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/ReportsController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, transaction_number\: string, payment_type\: string, discount\: float, discount_type\: string\|null, total\: float, created_at\: Carbon\\Carbon, items_count\: int\<0, max\>, user\: array\{id\: string, name\: string\|null, username\: string\}\|null\}, Closure\(App\\Models\\Transaction\)\: array\{id\: string, transaction_number\: string, payment_type\: string, discount\: float, discount_type\: string\|null, total\: float, created_at\: Carbon\\Carbon, items_count\: int\<0, max\>, user\: array\{id\: string, name\: string\|null, username\: string\}\|null\} given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/SalesController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/SalesController.php
 
@@ -109,6 +85,12 @@ parameters:
 			path: app/Http/Requests/Users/UpdateUserRoleRequest.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/TransactionItem.php
+
+		-
 			message: '#^Cannot call method atLeast\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -139,15 +121,9 @@ parameters:
 			path: app/Support/Inventory/CsvInventoryImporter.php
 
 		-
-			message: '#^Parameter \#1 \$timeout of static method Illuminate\\Support\\Facades\\Process\:\:timeout\(\) expects int, float given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Support/Printing/Connectors/SystemPrinterConnector.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 2
+			count: 1
 			path: app/Support/Printing/ReceiptContent.php
 
 		-
@@ -155,9 +131,3 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Support/Printing/ReceiptContent.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Support/Sales/ProcessSaleReturn.php

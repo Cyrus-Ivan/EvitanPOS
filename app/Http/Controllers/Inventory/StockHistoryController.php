@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Inventory;
 
+use App\Http\Controllers\Concerns\NormalizesDateFilter;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryLedger;
 use App\Models\Variant;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +20,8 @@ use Inertia\Response;
  */
 class StockHistoryController extends Controller
 {
+    use NormalizesDateFilter;
+
     /** Allowed inventory_ledger.type values. */
     private const TYPES = ['sale', 'stock_adjustment'];
 
@@ -77,21 +79,5 @@ class StockHistoryController extends Controller
                 'date_to' => $dateTo?->toDateString(),
             ],
         ]);
-    }
-
-    /**
-     * Parse a date filter param, discarding anything unparseable, else null.
-     */
-    private function normalizeDate(mixed $value): ?Carbon
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\LoginEventType;
+use App\Http\Controllers\Concerns\NormalizesDateFilter;
 use App\Models\LoginHistory;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +20,8 @@ use Inertia\Response;
  */
 class LoginHistoryController extends Controller
 {
+    use NormalizesDateFilter;
+
     public function index(Request $request): Response
     {
         $viewer = $request->user();
@@ -85,21 +87,5 @@ class LoginHistoryController extends Controller
     private function normalizeEvent(mixed $event): ?string
     {
         return LoginEventType::tryFrom((string) $event)?->value;
-    }
-
-    /**
-     * Parse a date filter param, discarding anything unparseable, else null.
-     */
-    private function normalizeDate(mixed $value): ?Carbon
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\NormalizesDateFilter;
 use App\Models\SaleReturn;
 use App\Models\SaleReturnItem;
 use App\Models\Transaction;
@@ -9,7 +10,6 @@ use App\Models\TransactionItem;
 use App\Models\User;
 use App\Support\Printing\PrinterException;
 use App\Support\Printing\ReceiptPrinter;
-use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -27,6 +27,8 @@ use Inertia\Response;
  */
 class SalesController extends Controller
 {
+    use NormalizesDateFilter;
+
     /** Allowed payment types (mirrors the POS checkout). */
     private const PAYMENT_TYPES = ['cash', 'cashless', 'others'];
 
@@ -205,21 +207,5 @@ class SalesController extends Controller
         $value = (string) $value;
 
         return in_array($value, self::PAYMENT_TYPES, true) ? $value : null;
-    }
-
-    /**
-     * Parse a date filter param, discarding anything unparseable, else null.
-     */
-    private function normalizeDate(mixed $value): ?Carbon
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

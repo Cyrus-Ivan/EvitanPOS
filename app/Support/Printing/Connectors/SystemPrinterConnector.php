@@ -29,12 +29,12 @@ class SystemPrinterConnector implements PrinterConnector
      * @param  string  $printerName  the OS print-queue name to target
      * @param  string  $osFamily  PHP_OS_FAMILY value; injectable so the
      *                            Windows branch is testable off-Windows
-     * @param  float  $timeout  seconds to wait for the spooler command
+     * @param  int  $timeout  seconds to wait for the spooler command
      */
     public function __construct(
         private readonly string $printerName,
         private readonly string $osFamily = PHP_OS_FAMILY,
-        private readonly float $timeout = 15.0,
+        private readonly int $timeout = 15,
     ) {}
 
     public function write(string $bytes): void

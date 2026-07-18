@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\NormalizesDateFilter;
 use App\Models\AuditLog;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +19,8 @@ use Inertia\Response;
  */
 class AuditLogController extends Controller
 {
+    use NormalizesDateFilter;
+
     public function index(Request $request): Response
     {
         $viewer = $request->user();
@@ -94,21 +96,5 @@ class AuditLogController extends Controller
         }
 
         return $stripped;
-    }
-
-    /**
-     * Parse a date filter param, discarding anything unparseable, else null.
-     */
-    private function normalizeDate(mixed $value): ?Carbon
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }
