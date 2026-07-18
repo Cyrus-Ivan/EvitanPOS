@@ -271,12 +271,12 @@ Tick items **before** committing; a session cut short commits only its ticked it
   - [x] Immutability enforcement audited for all 7 append-only tables
   - [x] Serial gap scenarios walked (rollback / crash / restore)
   - [x] Ledger↔snapshot drift + single-write-path bypass search done
-- [ ] **S2 — Security review**
-  - [ ] `/security-review` run and triaged
-  - [ ] Route × role authz matrix documented
-  - [ ] Cost-visibility surface list complete (each: mechanism + test?)
-  - [ ] CSV formula-injection checked; backup/restore edges checked
-  - [ ] F-04 printer decision made; Phase 19 config handoff drafted
+- [x] **S2 — Security review** *(2026-07-18 — F-03 closed as stale, F-04 accepted, F-15/F-16/F-17 added)*
+  - [x] `/security-review` run and triaged *(skill is diff-based with no product diff pending — equivalent manual pass done; S9 runs the skill over the S5–S8 diff)*
+  - [x] Route × role authz matrix documented
+  - [x] Cost-visibility surface list complete (each: mechanism + test?)
+  - [x] CSV formula-injection checked; backup/restore edges checked
+  - [x] F-04 printer decision made; Phase 19 config handoff drafted
 - [ ] **S3 — Accuracy & assumptions review**
   - [ ] Money paths traced; adversarial fixtures written down
   - [ ] Report attribution + boundary rules verified
