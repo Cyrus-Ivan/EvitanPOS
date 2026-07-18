@@ -281,11 +281,11 @@ Tick items **before** committing; a session cut short commits only its ticked it
   - [x] Money paths traced; adversarial fixtures written down
   - [x] Report attribution + boundary rules verified
   - [x] All assumption-challenge items dispositioned
-- [ ] **S4 — Code-quality review**
-  - [ ] jscpd duplication scan run and triaged into findings
-  - [ ] Larastan wired (config + baseline committed); real issues logged
-  - [ ] Structure pass done (PHP services + React types/components)
-  - [ ] Dead-code sweep done; extraction proposals named in findings
+- [x] **S4 — Code-quality review** *(2026-07-18 — F-20…F-25 added; Larastan wired at level 5 with 36-entry baseline, zero runtime defects)*
+  - [x] jscpd duplication scan run and triaged into findings
+  - [x] Larastan wired (config + baseline committed); real issues logged
+  - [x] Structure pass done (PHP services + React types/components)
+  - [x] Dead-code sweep done; extraction proposals named in findings
 - [ ] **S5 — Backend test expansion**
   - [ ] Redaction, serial, money-fixture, archived-visibility, reconcile, CSV-edge tests green
   - [ ] Failing-today tests converted to findings and parked for S8

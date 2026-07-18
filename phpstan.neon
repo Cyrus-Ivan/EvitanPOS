@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+
+    # Pragmatic starting level (see docs/phase-18-plan.md S4); raise gradually
+    # once the baseline burns down.
+    level: 5
+
+    # Relations/attributes are typed via PHPDoc generics that can't express
+    # runtime nullability (missing FK rows, unloaded relations) — don't flag
+    # the defensive null-handling as impossible.
+    treatPhpDocTypesAsCertain: false

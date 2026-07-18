@@ -1,0 +1,163 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$values of method App\\Http\\Controllers\\AuditLogController\:\:redact\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/AuditLogController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Inventory/InventoryExportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Inventory/InventoryExportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Inventory/InventoryImportController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/PosController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\<string, mixed\>, Closure\(App\\Models\\Variant\)\: array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PosController.php
+
+		-
+			message: '#^Parameter \#2 \$lines of method App\\Http\\Controllers\\PosController\:\:persistSale\(\) expects Illuminate\\Support\\Collection\<int, array\{variant_id\: string, quantity\: int\}\>, Illuminate\\Support\\Collection\<int, array\{variant_id\: mixed, quantity\: int\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PosController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/PosController.php
+
+		-
+			message: '#^PHPDoc tag @return contains generic type Illuminate\\Http\\JsonResponse\<array\<string, list\<array\<string, string\>\>\>\> but class Illuminate\\Http\\JsonResponse is not generic\.$#'
+			identifier: generics.notGeneric
+			count: 1
+			path: app/Http/Controllers/PrinterSettingsController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ReportsController\:\:itemRefundByBucket\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, stdClass\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/ReportsController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ReportsController\:\:itemRevenueByBucket\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, stdClass\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/ReportsController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, transaction_number\: string, payment_type\: string, discount\: float, discount_type\: string\|null, total\: float, created_at\: Carbon\\Carbon, items_count\: int\<0, max\>, user\: array\{id\: string, name\: string\|null, username\: string\}\|null\}, Closure\(App\\Models\\Transaction\)\: array\{id\: string, transaction_number\: string, payment_type\: string, discount\: float, discount_type\: string\|null, total\: float, created_at\: Carbon\\Carbon, items_count\: int\<0, max\>, user\: array\{id\: string, name\: string\|null, username\: string\}\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/SalesController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/SalesController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Cannot call method assignableRoles\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, name\: string\|null, username\: string, role\: string, deleted_at\: Carbon\\Carbon\|null, created_at\: Carbon\\Carbon\|null\}, Closure\(App\\Models\\User\)\: array\{id\: string, name\: string\|null, username\: string, role\: string, deleted_at\: Carbon\\Carbon\|null, created_at\: Carbon\\Carbon\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Cannot call method assignableRoles\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Users/StoreUserRequest.php
+
+		-
+			message: '#^Cannot call method assignableRoles\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Users/UpdateUserRoleRequest.php
+
+		-
+			message: '#^Cannot call method atLeast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Variant.php
+
+		-
+			message: '#^Cannot call method level\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Policies/UserPolicy.php
+
+		-
+			message: '#^Parameter &\$cache by\-ref type of method App\\Support\\Inventory\\CsvInventoryImporter\:\:resolveCategoryId\(\) expects array\<string, string\>, array\<string, mixed\> given\.$#'
+			identifier: parameterByRef.type
+			count: 1
+			path: app/Support/Inventory/CsvInventoryImporter.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-list\<string\|null\> and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Support/Inventory/CsvInventoryImporter.php
+
+		-
+			message: '#^Parameter \#1 \$timeout of static method Illuminate\\Support\\Facades\\Process\:\:timeout\(\) expects int, float given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Support/Printing/Connectors/SystemPrinterConnector.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Support/Printing/ReceiptContent.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>username" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Printing/ReceiptContent.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/Sales/ProcessSaleReturn.php
