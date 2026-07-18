@@ -31,3 +31,21 @@ export async function addToCart(page: Page, label: string): Promise<void> {
 export function toast(page: Page) {
     return page.locator('[data-sonner-toast]').last();
 }
+
+/** Log out through the sidebar user menu (identified by the display name). */
+export async function logout(page: Page, displayName: string): Promise<void> {
+    await page.getByRole('button', { name: new RegExp(displayName) }).click();
+    await page.getByRole('menuitem', { name: /Log out/ }).click();
+    await page.waitForURL('**/login');
+}
+
+/** The value text of a reports StatCard, addressed by its label. */
+export async function statValue(page: Page, label: string): Promise<string> {
+    const labelEl = page.locator('div.uppercase').filter({ hasText: new RegExp(`^${label}$`) });
+    return labelEl.locator('xpath=following-sibling::div[1]').innerText();
+}
+
+/** "₱1,234.56" → 1234.56 */
+export function parsePeso(text: string): number {
+    return parseFloat(text.replace(/[^0-9.-]/g, ''));
+}

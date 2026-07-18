@@ -30,3 +30,4 @@ yarn-error.log
 /tests/e2e/.runtime
 /test-results
 /playwright-report
+/storage/backups

@@ -293,9 +293,9 @@ Tick items **before** committing; a session cut short commits only its ticked it
   - [x] Playwright installed; isolated-DB webServer config working
   - [x] `types` / `lint:check` scripts wired (failures logged) *(both pass clean — F-06 closed)*
   - [x] Smoke specs green
-- [ ] **S7 — E2E workflows**
-  - [ ] Commerce-chain spec green (numbers match fixtures)
-  - [ ] Role-gating, error-page, ops-surface specs green
+- [x] **S7 — E2E workflows** *(2026-07-18 — 9 E2E specs green; commerce chain asserts report deltas so accumulated E2E state never skews the arithmetic)*
+  - [x] Commerce-chain spec green (numbers match fixtures)
+  - [x] Role-gating, error-page, ops-surface specs green
 - [ ] **S8 — Fix sessions**
   - [ ] All Blocker/High findings closed
   - [ ] All Medium findings closed or accepted

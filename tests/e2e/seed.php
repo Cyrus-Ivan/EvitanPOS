@@ -20,6 +20,7 @@ User::factory()->cashier()->create(['username' => 'e2e-cashier', 'name' => 'E2E 
 
 $owner = User::query()->where('role', 'owner')->firstOrFail();
 $owner->password = 'password';
+$owner->name = 'E2E Owner';
 $owner->save();
 
 $item = Item::factory()->create(['name' => 'E2E Smoke Coffee']);
