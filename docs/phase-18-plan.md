@@ -289,10 +289,10 @@ Tick items **before** committing; a session cut short commits only its ticked it
 - [x] **S5 — Backend test expansion** *(2026-07-18 — 364 → 378 tests; F-26 archived-user visibility found and parked for S8)*
   - [x] Redaction, serial, money-fixture, archived-visibility, reconcile, CSV-edge tests green *(redaction already existed — F-03)*
   - [x] Failing-today tests converted to findings and parked for S8 *(archived-user rows → F-26; collision-retry → with F-09; formula-injection round-trip → with F-16)*
-- [ ] **S6 — E2E bootstrap**
-  - [ ] Playwright installed; isolated-DB webServer config working
-  - [ ] `types` / `lint:check` scripts wired (failures logged)
-  - [ ] Smoke specs green
+- [x] **S6 — E2E bootstrap** *(2026-07-18 — 3 smoke specs green; note: Playwright starts webServer before globalSetup, so all isolation setup lives in `tests/e2e/serve.sh`)*
+  - [x] Playwright installed; isolated-DB webServer config working
+  - [x] `types` / `lint:check` scripts wired (failures logged) *(both pass clean — F-06 closed)*
+  - [x] Smoke specs green
 - [ ] **S7 — E2E workflows**
   - [ ] Commerce-chain spec green (numbers match fixtures)
   - [ ] Role-gating, error-page, ops-surface specs green
