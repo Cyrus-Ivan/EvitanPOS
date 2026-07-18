@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use App\Models\Concerns\Immutable;
 use Database\Factories\SaleReturnFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SaleReturn extends Model
 {
     /** @use HasFactory<SaleReturnFactory> */
-    use HasFactory, HasUuidPrimaryKey;
+    use HasFactory, HasUuidPrimaryKey, Immutable;
 
     // Append-only / immutable: no updated_at (matches inventory_ledger).
     public const UPDATED_AT = null;
@@ -54,7 +55,7 @@ class SaleReturn extends Model
      */
     public function performedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'performed_by');
+        return $this->belongsTo(User::class, 'performed_by')->withTrashed();
     }
 
     /**

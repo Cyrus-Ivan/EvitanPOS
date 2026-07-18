@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use App\Models\Concerns\Immutable;
 use Database\Factories\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
-    use HasFactory, HasUuidPrimaryKey;
+    use HasFactory, HasUuidPrimaryKey, Immutable;
 
     // Append-only: a completed sale is immutable business history.
     public const UPDATED_AT = null;
@@ -45,7 +46,7 @@ class Transaction extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     /**

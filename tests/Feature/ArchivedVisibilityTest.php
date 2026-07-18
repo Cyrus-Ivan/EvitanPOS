@@ -10,12 +10,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Phase 18 S5 — "Never delete business records": archived items/variants are
- * hidden from default lists but must remain visible in all historical records.
- *
- * (The matching sweep for archived USERS is parked with finding F-26 — the
- * user relations drop soft-deleted rows today; those tests land with the S8
- * fix.)
+ * Phase 18 S5/S8 — "Never delete business records": archived items/variants
+ * are hidden from default lists but must remain visible in all historical
+ * records, and archived (soft-deleted) users must still appear in Sales,
+ * Login History and Audit Logs (F-26).
  */
 class ArchivedVisibilityTest extends TestCase
 {
@@ -89,6 +87,56 @@ class ArchivedVisibilityTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('inventory/stock-history', false)
                 ->where('entries.total', 2)); // seed adjustment + sale deduction
+    }
+
+    public function test_archived_user_still_appears_in_sales_history(): void
+    {
+        [$transaction, , $cashier] = $this->sellAndArchive();
+
+        $cashier->delete(); // soft delete — "archive" in product terms
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('sales.show', $transaction))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('sales/show', false)
+                ->where('transaction.user.username', $cashier->username));
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('sales'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('sales', false)
+                ->where('transactions.data.0.user.username', $cashier->username));
+    }
+
+    public function test_archived_user_still_appears_in_login_history(): void
+    {
+        $cashier = User::factory()->cashier()->create();
+        \App\Models\LoginHistory::factory()->create(['user_id' => $cashier->id]);
+
+        $cashier->delete();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('login-history'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('login-history', false)
+                ->where('entries.data.0.user.username', $cashier->username));
+    }
+
+    public function test_archived_user_still_appears_as_audit_log_actor(): void
+    {
+        [, , $cashier] = $this->sellAndArchive(); // the checkout audits as the cashier
+
+        $cashier->delete();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('audit-logs'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('audit-logs', false)
+                ->where('entries.data.0.user.username', $cashier->username));
     }
 
     public function test_archived_variant_can_still_be_returned_against(): void

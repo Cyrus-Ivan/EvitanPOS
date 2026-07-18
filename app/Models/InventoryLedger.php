@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use App\Models\Concerns\Immutable;
 use Database\Factories\InventoryLedgerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class InventoryLedger extends Model
 {
     /** @use HasFactory<InventoryLedgerFactory> */
-    use HasFactory, HasUuidPrimaryKey;
+    use HasFactory, HasUuidPrimaryKey, Immutable;
 
     protected $table = 'inventory_ledger';
 
@@ -56,6 +57,6 @@ class InventoryLedger extends Model
      */
     public function performedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'performed_by');
+        return $this->belongsTo(User::class, 'performed_by')->withTrashed();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
+use App\Models\Concerns\Immutable;
 use App\Models\Concerns\HidesCostFromNonOwners;
 use Database\Factories\SaleReturnItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SaleReturnItem extends Model
 {
     /** @use HasFactory<SaleReturnItemFactory> */
-    use HasFactory, HasUuidPrimaryKey, HidesCostFromNonOwners;
+    use HasFactory, HasUuidPrimaryKey, HidesCostFromNonOwners, Immutable;
 
     // Append-only / immutable line: no updated_at.
     public const UPDATED_AT = null;
