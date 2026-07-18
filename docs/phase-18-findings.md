@@ -17,6 +17,12 @@ all six gates pass** (`php artisan test`, `npx playwright test`, `npm run types`
 security re-review over the full phase diff found no new issues. Phase 19 can start from this
 list alone.
 
+*Addendum (2026-07-18, post-close re-review):* items **11–16** below were added by an
+independent re-audit of the closed phase, which also landed findings F-27…F-30 (tests for
+previously uncovered printer/appearance routes, dead `LoginEventType` cases removed, an E2E
+nav smoke, and an explicit disposition for F-06's JS-unit-runner sub-item). Backend suite is
+now **410 tests**; E2E is **10 specs**.
+
 1. **Packaged-build config (F-05 — the one finding still open, as the release gate).** The
    build must pin `APP_DEBUG=false` and `APP_ENV=production`, and **generate a fresh
    `APP_KEY` per install** — never ship the working `.env`'s key. Friendly error pages only
@@ -49,6 +55,35 @@ list alone.
 10. **E2E suite note.** `npm run e2e` drives the full Playwright suite against an isolated DB
     copy (`tests/e2e/serve.sh` does the copy/build/seed). Useful as a release smoke test; not
     part of the packaged build.
+11. **NativePHP packaging identity/config (addendum).** `config/nativephp.php` still ships
+    scaffold defaults: `app_id` = `com.nativephp.app`, empty author/copyright, the placeholder
+    description/website, version `1.0.0` with no `NATIVEPHP_APP_VERSION` set anywhere. The
+    **auto-updater is enabled by default against an unconfigured `spaces` provider** — set
+    `NATIVEPHP_UPDATER_ENABLED=false` or configure a real provider before building.
+    `cleanup_env_keys` does **not** strip `APP_KEY` or `DB_*` from the bundled `.env` (this is
+    the concrete mechanism behind item 1's "never ship the working key" — extend the list). An
+    idle `default` queue worker auto-starts with no jobs anywhere; drop it or keep it
+    deliberately.
+12. **Clean starting database + first-run provisioning (addendum).** `native:build` packages
+    the working tree, and `cleanup_exclude_files` does not exclude `database/*.sqlite` — a
+    build today would ship the dev demo DB (demo sales + the `owner`/`password` account) as
+    the customer's starting data. The build must ship a fresh migrated DB (or none, plus
+    item 8's migrate-on-boot), and the first Owner account's provisioning must be defined —
+    nothing in the packaged runtime runs `migrate` or `db:seed` today
+    (`NativeAppServiceProvider::boot()` only opens the window). `DatabaseSeeder` already
+    gates demo data to the `local` environment, so seeding under `APP_ENV=production` is safe.
+13. **Application icon (addendum).** `public/icon.{png,ico,icns}` are byte-identical to the
+    NativePHP scaffold icons — the Evitan mark was applied to the favicon and in-app logo but
+    never to the desktop icon set NativePHP packages. Regenerate before building.
+14. **Remaining ROADMAP Phase 19 deliverables not restated above (addendum):** Installer,
+    in-app version surface (no version number or About view exists anywhere in the UI),
+    Build NativePHP Executable, Release Notes.
+15. **Logging (addendum).** `LOG_LEVEL=debug` on the single-file `laravel.log` channel with
+    no rotation; a packaged build should raise the level and switch to a rotating channel.
+16. **Restore vs immutability triggers (addendum).** Restoring a backup created before
+    migration `2026_07_18_000001` yields a live DB **without** the immutability triggers
+    until migrations re-run — `looksLikeEvitanSchema` validates tables only, not triggers.
+    One more reason item 8's migrate-on-boot must also cover the relaunch after a restore.
 
 ---
 
@@ -81,6 +116,10 @@ list alone.
 | F-26 | Invariants | High | **Archived users vanish from history rows.** None of the six `belongsTo(User::class)` relations (`Transaction::user`, `SaleReturn::performedBy`, `InventoryLedger::performedBy`, `AuditLog::user`, `LoginHistory::user`, `ImportHistory::user`) apply `withTrashed()`, so the soft-delete scope nulls them out — a sale made by a since-archived cashier renders with no user on the sales pages, login-history rows lose their user, audit rows lose their actor, stock-history loses performed-by. Directly violates CLAUDE.md: "Archived users must still appear in Sales, Login History, and Audit Logs." (The filter dropdowns already use `User::withTrashed()` — only the row relations were missed.) | `app/Models/Transaction.php:48`, `SaleReturn.php:57`, `InventoryLedger.php:59`, `AuditLog.php:64`, `LoginHistory.php:46`, `ImportHistory.php:45` | Add `->withTrashed()` to all six relations. S5 wrote the visibility tests but parked them (they fail today); they land with this fix in S8. | Fixed@4c8a2d6 |
 | F-15 | Security | Medium | Starter-kit **profile page** survives with two spec violations: (a) any user can rename their own `name` **and `username`** freely (`ProfileUpdateRequest` allows both), contradicting Phase 13's "name is immutable after creation" and bypassing User Management; (b) `DELETE settings/profile` lets any non-Owner **self-delete** (soft-delete) outside User Management. Neither action writes an audit entry, breaking the "every user change is audited" invariant. | `app/Http/Controllers/Settings/ProfileController.php:26-32,37-61`, `app/Http/Requests/Settings/ProfileUpdateRequest.php`, `resources/js/pages/settings/profile.tsx` | Remove the delete-account route + UI section; make name/username read-only on the profile page (identity is managed via Phase 13 flows; password change already lives at `settings/password`). S8 implements + tests. | Fixed@097fdec |
 | F-16 | Security | Low | CSV export does not escape cells beginning with `=`, `+`, `-`, `@` (item/category/variant names, description) — spreadsheet apps execute them as formulas (CSV/formula injection). Context limits impact: only Admin+ can name items, and the file is opened by the same business's staff. | `app/Http/Controllers/Inventory/InventoryExportController.php` (row builder; `fputcsv(..., escape: '')`) | Two options for S8: (a) escape on export (prefix `'`) — but that corrupts the import round-trip (re-import would rename the product); or (b) reject leading `=`/`+`/`@` (and lone leading `-`) in name fields at validation time — product names never legitimately start with those. Prefer (b). | Fixed@9933bd5 (option b: SpreadsheetSafeName on forms + importer, with tests) |
+| F-27 | Test-coverage | Low | Addendum re-review: `PrinterSettingsController::test()` (send-test-print) and `::printers()` (system-printer discovery) had **no tests at all** (action, role gating, error paths); the closure-rendered `settings/appearance` route had zero backend coverage (absent from `NavigationTest`); the import page's history payload render was unasserted. | `routes/web.php:101-102`, `routes/settings.php:19-21`, `tests/Feature/NavigationTest.php` | Feature tests: printer actions with a `ReceiptPrinter` mock + `System` facade fake (success / device-failure / unconfigured / non-Owner 403); profile, password, and appearance added to `NavigationTest`; import-page Inertia payload assertion. | Fixed@00a80dd |
+| F-28 | Code-quality | Low | Addendum re-review: `LoginEventType::WindowClosed` / `::PowerLoss` were dead enum cases — `SessionManager::markUncleanExit()` records every unclean exit as `ApplicationCrash` (the causes are indistinguishable post-hoc), nothing ever wrote the two values, and no rows carry them in any database. The Phase 2 spec's finer distinction was silently collapsed without being recorded. | `app/Enums/LoginEventType.php:14-15` | Remove both cases (+ the TS union, label-map entries, and migration comment); document the collapse on the enum itself. | Fixed@00a80dd |
+| F-29 | Tooling | n/a | Addendum re-review: F-06's "no JS test runner" sub-item was closed at S6 with `tsc`, `lint:check`, and Playwright only — no JS **unit** runner (vitest/jest) exists, and that part of the finding was never explicitly dispositioned. | `package.json` | — | Accepted (addendum): the server recomputes all money and client logic is thin — `tsc --noEmit` and the E2E suite gate the frontend. Revisit only if client-side logic grows. |
+| F-30 | Test-coverage | Low | Addendum re-review: 7 of 11 nav destinations had no E2E interaction at all (Inventory, Categories, Stock History, Login History, Users, Audit Logs, Settings) — E2E covered only POS, Sales, Reports, and Backup. | `tests/e2e/*.spec.ts` | Nav-smoke spec: visit each destination as Owner and assert its per-page document title renders through the built manifest. | Fixed@00a80dd |
 | F-17 | Security | Medium | Restore accepts **any valid SQLite file** (16-byte magic check only). Restoring a foreign-but-valid SQLite DB replaces the live database and bricks the app (login fails, no in-app path back to the pre-restore safety backup — recovery requires manual file copying, beyond a non-technical owner). | `app/Support/Backup/DatabaseBackupManager.php:139-141,168-180` | Before overwriting the live file, open the candidate read-only (PDO sqlite) and verify the expected schema is present (e.g. `users`, `transactions`, `settings` tables in `sqlite_master`); abort with a clear error if not. S8 implements + tests. | Fixed@097fdec |
 
 ---
