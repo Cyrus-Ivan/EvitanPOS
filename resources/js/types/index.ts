@@ -91,7 +91,7 @@ export interface Item {
     updated_at: string;
 }
 
-export type LoginEventType = 'login' | 'logout' | 'window_closed' | 'application_crash' | 'power_loss' | 'forced_logout';
+export type LoginEventType = 'login' | 'logout' | 'application_crash' | 'forced_logout';
 
 // A row from the append-only login history (Phase 14, display only).
 export interface LoginHistoryEntry {

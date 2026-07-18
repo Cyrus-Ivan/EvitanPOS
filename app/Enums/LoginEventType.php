@@ -6,11 +6,9 @@ enum LoginEventType: string
 {
     case Login = 'login';
     case Logout = 'logout';
+    // Every unclean exit (window close, power loss, crash, force-kill) is
+    // detected on the next boot and recorded as ApplicationCrash — the causes
+    // are indistinguishable after the fact. See SessionManager::markUncleanExit.
     case ApplicationCrash = 'application_crash';
     case ForcedLogout = 'forced_logout';
-
-    // Legacy values retained so historical rows recorded before the boot-guard
-    // model still resolve; no new rows are written with these types.
-    case WindowClosed = 'window_closed';
-    case PowerLoss = 'power_loss';
 }

@@ -333,6 +333,28 @@ class InventoryImportTest extends TestCase
         ]);
     }
 
+    public function test_the_import_page_renders_the_upload_history(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->post(route('inventory.import.store'), ['file' => $this->csv([$this->row()])])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($owner)
+            ->get(route('inventory.import'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('inventory/import', false)
+                ->has('history.data', 1)
+                ->where('history.data.0.filename', 'inventory.csv')
+                ->where('history.data.0.status', 'success')
+                ->where('history.data.0.total_rows', 1)
+                ->where('history.data.0.success_count', 1)
+                ->where('history.data.0.error_count', 0)
+                ->where('history.data.0.user', $owner->name));
+    }
+
     public function test_import_rejects_adding_a_named_variant_to_an_existing_no_variant_item()
     {
         $owner = User::factory()->owner()->create();

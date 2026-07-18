@@ -14,8 +14,7 @@ return new class extends Migration
         Schema::create('login_history', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->constrained()->restrictOnDelete();
-            // Allowed: login | logout | window_closed | application_crash
-            //          | power_loss | forced_logout
+            // Allowed: login | logout | application_crash | forced_logout
             $table->string('event_type');
             // Actual event time; may be approximate/null for power loss detected
             // on next startup.

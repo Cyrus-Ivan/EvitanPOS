@@ -131,10 +131,11 @@ class LoginHistoryDisplayTest extends TestCase
     {
         $owner = User::factory()->owner()->create();
 
-        // occurred_at can be null (e.g. power loss); the filter falls back to created_at.
-        LoginHistory::factory()->for($owner)->event(LoginEventType::PowerLoss)
+        // occurred_at can be null (an unclean exit detected on the next boot);
+        // the filter falls back to created_at.
+        LoginHistory::factory()->for($owner)->event(LoginEventType::ApplicationCrash)
             ->create(['occurred_at' => null, 'created_at' => '2026-01-11 08:00:00']);
-        LoginHistory::factory()->for($owner)->event(LoginEventType::PowerLoss)
+        LoginHistory::factory()->for($owner)->event(LoginEventType::ApplicationCrash)
             ->create(['occurred_at' => null, 'created_at' => '2026-01-20 08:00:00']);
 
         $this->actingAs($owner)->get(route('login-history', ['date_from' => '2026-01-10', 'date_to' => '2026-01-15']))

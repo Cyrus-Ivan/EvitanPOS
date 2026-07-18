@@ -22,9 +22,6 @@ const EVENT: Record<LoginEventType, { label: string; variant: 'default' | 'secon
     // on the next launch and recorded uniformly as application_crash.
     application_crash: { label: 'Unexpected exit', variant: 'destructive' },
     forced_logout: { label: 'Forced logout', variant: 'destructive' },
-    // Legacy values kept for historical rows recorded before the boot-guard model.
-    window_closed: { label: 'Window closed', variant: 'outline' },
-    power_loss: { label: 'Power loss', variant: 'destructive' },
 };
 
 function formatWhen(value: string | null): string {
