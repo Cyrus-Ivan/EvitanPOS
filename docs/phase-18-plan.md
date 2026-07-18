@@ -266,11 +266,11 @@ you go. Anything downgraded to Accepted-risk gets its rationale written in the l
 
 Tick items **before** committing; a session cut short commits only its ticked items.
 
-- [ ] **S1 — Invariant & integrity review**
-  - [ ] Findings log created with seed findings F-01…F-08
-  - [ ] Immutability enforcement audited for all 7 append-only tables
-  - [ ] Serial gap scenarios walked (rollback / crash / restore)
-  - [ ] Ledger↔snapshot drift + single-write-path bypass search done
+- [x] **S1 — Invariant & integrity review** *(2026-07-18 — findings F-09…F-14 added; enforcement shape decided in F-01: model guards + SQLite triggers)*
+  - [x] Findings log created with seed findings F-01…F-08
+  - [x] Immutability enforcement audited for all 7 append-only tables
+  - [x] Serial gap scenarios walked (rollback / crash / restore)
+  - [x] Ledger↔snapshot drift + single-write-path bypass search done
 - [ ] **S2 — Security review**
   - [ ] `/security-review` run and triaged
   - [ ] Route × role authz matrix documented
