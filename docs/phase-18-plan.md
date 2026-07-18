@@ -286,9 +286,9 @@ Tick items **before** committing; a session cut short commits only its ticked it
   - [x] Larastan wired (config + baseline committed); real issues logged
   - [x] Structure pass done (PHP services + React types/components)
   - [x] Dead-code sweep done; extraction proposals named in findings
-- [ ] **S5 — Backend test expansion**
-  - [ ] Redaction, serial, money-fixture, archived-visibility, reconcile, CSV-edge tests green
-  - [ ] Failing-today tests converted to findings and parked for S8
+- [x] **S5 — Backend test expansion** *(2026-07-18 — 364 → 378 tests; F-26 archived-user visibility found and parked for S8)*
+  - [x] Redaction, serial, money-fixture, archived-visibility, reconcile, CSV-edge tests green *(redaction already existed — F-03)*
+  - [x] Failing-today tests converted to findings and parked for S8 *(archived-user rows → F-26; collision-retry → with F-09; formula-injection round-trip → with F-16)*
 - [ ] **S6 — E2E bootstrap**
   - [ ] Playwright installed; isolated-DB webServer config working
   - [ ] `types` / `lint:check` scripts wired (failures logged)
