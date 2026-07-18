@@ -4,7 +4,7 @@
 
 This roadmap prioritizes building a **working application as early as possible**, while minimizing refactoring. Each phase should produce a usable milestone before moving to the next.
 
-> **Status:** Phases 0–17 are **complete** (✅). Remaining: Phase 18 (Testing), Phase 19 (Release Preparation). Confirm against `git log` and the code.
+> **Status:** Phases 0–18 are **complete** (✅). Remaining: Phase 19 (Release Preparation) — start from the handoff list at the top of `docs/phase-18-findings.md`. Confirm against `git log` and the code.
 
 ---
 
@@ -614,7 +614,7 @@ progress bar covers slow cases; do not reopen in Phase 18/19.
 
 ---
 
-# Phase 18 — Testing
+# Phase 18 — Testing ✅
 
 ## Goal
 
@@ -659,6 +659,18 @@ Audit logs
 **Milestone**
 
 Feature complete.
+
+**Status: done (2026-07-18).** Ran as nine sessions (S1–S9): four review passes (invariants,
+security, accuracy, code quality), backend test expansion (364 → 396 tests incl. cent-exact
+money fixtures and serial-gaplessness proofs), a Playwright E2E suite (9 specs: commerce
+chain, role gating, error pages, ops surfaces, smoke), then fix sessions closing all 26
+findings — highlights: DB-level immutability triggers + model guards on all seven append-only
+tables, archived users restored to history rows (`withTrashed`), `APP_TIMEZONE=Asia/Manila`,
+MAX-based self-healing serial generators, restore refuses foreign SQLite files, profile page
+locked down, formula-safe names, `inventory:reconcile` command. Exit gates all green
+(`php artisan test` · `npx playwright test` · `npm run types` · `npm run lint:check` ·
+`pint --test` · `phpstan`); final security review clean. Findings log + **Phase 19 handoff
+list**: `docs/phase-18-findings.md`.
 
 ---
 

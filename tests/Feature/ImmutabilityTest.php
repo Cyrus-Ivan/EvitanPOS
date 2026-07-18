@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\InventoryLedger;
 use App\Models\LoginHistory;
 use App\Models\SaleReturn;
@@ -93,7 +94,7 @@ class ImmutabilityTest extends TestCase
 
     public function test_audit_logs_trigger_blocks_bulk_writes(): void
     {
-        $log = \App\Models\AuditLog::factory()->create();
+        $log = AuditLog::factory()->create();
 
         $this->expectException(QueryException::class);
         DB::table('audit_logs')->where('id', $log->id)->update(['action' => 'tampered']);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LoginHistory;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Variant;
@@ -113,7 +114,7 @@ class ArchivedVisibilityTest extends TestCase
     public function test_archived_user_still_appears_in_login_history(): void
     {
         $cashier = User::factory()->cashier()->create();
-        \App\Models\LoginHistory::factory()->create(['user_id' => $cashier->id]);
+        LoginHistory::factory()->create(['user_id' => $cashier->id]);
 
         $cashier->delete();
 

@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidPrimaryKey;
-use App\Models\Concerns\Immutable;
 use App\Models\Concerns\HidesCostFromNonOwners;
+use App\Models\Concerns\Immutable;
 use Database\Factories\SaleReturnItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

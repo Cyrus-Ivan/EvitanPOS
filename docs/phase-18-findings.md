@@ -11,7 +11,44 @@ keep `TBD (Sx)` until their owning session confirms severity.
 
 ## Phase 19 handoff list
 
-*(written by S9 at phase close — placeholder)*
+Written at S9 close (2026-07-18). Phase 18 exit state: **396 backend tests + 9 E2E specs green;
+all six gates pass** (`php artisan test`, `npx playwright test`, `npm run types`,
+`npm run lint:check`, `./vendor/bin/pint --test`, `./vendor/bin/phpstan analyse`); the
+security re-review over the full phase diff found no new issues. Phase 19 can start from this
+list alone.
+
+1. **Packaged-build config (F-05 — the one finding still open, as the release gate).** The
+   build must pin `APP_DEBUG=false` and `APP_ENV=production`, and **generate a fresh
+   `APP_KEY` per install** — never ship the working `.env`'s key. Friendly error pages only
+   render with debug off.
+2. **Default Owner credentials.** Dev login `owner` / `password` must not ship: force a
+   password change on first login (or generate + display a one-time password during install).
+3. **Timezone.** `APP_TIMEZONE=Asia/Manila` is pinned in `.env` / `.env.example` (F-14).
+   Decide whether packaged installs stay pinned or derive from the machine's timezone; if the
+   product ever ships outside PH, this becomes an installer setting.
+4. **SQLite optimization (F-19).** `busy_timeout=5000` is already set. If WAL is adopted
+   during this phase: the file-copy backup in `DatabaseBackupManager` depends on the DELETE
+   journal — a WAL build must `PRAGMA wal_checkpoint(TRUNCATE)` before copying (or copy the
+   `-wal`/`-shm` sidecars), else backups are silently stale.
+5. **Post-restore reconcile (F-11).** `php artisan inventory:reconcile` exists and is tested.
+   Wire it to run after a database restore (on the relaunch/next boot after a restore — it
+   cannot run in the restore request itself, because the restore overwrites the SQLite file
+   under the request's open connection).
+6. **Restore warning copy (F-10, accepted).** Add one line to the restore confirmation:
+   restoring an older backup discards newer sales, and their already-printed receipt serials
+   will be reissued to future sales.
+7. **Printer transport (F-04, accepted).** `device_path` / `network_host` stay Owner-set free
+   text by design. The Phase 11 deferred seam remains: a libusb/WinUSB transport for raw-USB
+   printers with no device file and no OS queue.
+8. **Migrations on install/update.** The packaged app must run `php artisan migrate` on boot —
+   the Phase 18 immutability-triggers migration (`2026_07_18_000001`) must reach production
+   databases.
+9. **BIR ATP compliance TODO** (pre-existing, recorded in `TransactionNumberGenerator`): a real
+   Authority-To-Print registration needs a configurable series prefix and starting serial.
+   Format is range-ready; not built.
+10. **E2E suite note.** `npm run e2e` drives the full Playwright suite against an isolated DB
+    copy (`tests/e2e/serve.sh` does the copy/build/seed). Useful as a release smoke test; not
+    part of the packaged build.
 
 ---
 

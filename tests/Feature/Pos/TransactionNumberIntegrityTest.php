@@ -6,7 +6,9 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Variant;
 use App\Support\Inventory\StockLedger;
+use App\Support\Sales\TransactionNumberGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -113,9 +115,9 @@ class TransactionNumberIntegrityTest extends TestCase
         // Simulate out-of-band row loss (manual SQL against the file): the
         // immutability triggers must come down for the simulation, exactly as
         // they would not exist for someone editing the DB with another tool.
-        \Illuminate\Support\Facades\DB::unprepared('DROP TRIGGER transactions_immutable_delete');
-        \Illuminate\Support\Facades\DB::unprepared('DROP TRIGGER transaction_items_immutable_delete');
-        \Illuminate\Support\Facades\DB::table('transactions')->where('transaction_number', '0000000002')->delete();
+        DB::unprepared('DROP TRIGGER transactions_immutable_delete');
+        DB::unprepared('DROP TRIGGER transaction_items_immutable_delete');
+        DB::table('transactions')->where('transaction_number', '0000000002')->delete();
 
         // A MAX-based serial continues from the highest committed number — a
         // count-based one would recompute #3, collide with the surviving row
@@ -142,7 +144,7 @@ class TransactionNumberIntegrityTest extends TestCase
         // A generator that first hands out the already-taken number (the shape
         // of a concurrency race) and only then computes a real one: checkout
         // must absorb the UNIQUE violation and succeed on the retry.
-        $fake = new class extends \App\Support\Sales\TransactionNumberGenerator
+        $fake = new class extends TransactionNumberGenerator
         {
             public int $calls = 0;
 
@@ -153,7 +155,7 @@ class TransactionNumberIntegrityTest extends TestCase
                 return $this->calls === 1 ? '0000000001' : parent::next();
             }
         };
-        $this->app->instance(\App\Support\Sales\TransactionNumberGenerator::class, $fake);
+        $this->app->instance(TransactionNumberGenerator::class, $fake);
 
         $this->checkout($cashier, $variant, 1)->assertSessionHasNoErrors();
 
