@@ -277,10 +277,10 @@ Tick items **before** committing; a session cut short commits only its ticked it
   - [x] Cost-visibility surface list complete (each: mechanism + test?)
   - [x] CSV formula-injection checked; backup/restore edges checked
   - [x] F-04 printer decision made; Phase 19 config handoff drafted
-- [ ] **S3 — Accuracy & assumptions review**
-  - [ ] Money paths traced; adversarial fixtures written down
-  - [ ] Report attribution + boundary rules verified
-  - [ ] All assumption-challenge items dispositioned
+- [x] **S3 — Accuracy & assumptions review** *(2026-07-18 — F-07 confirmed sound (tests only), F-14 raised to High incl. receipts, F-18/F-19 added; fixtures A–D written)*
+  - [x] Money paths traced; adversarial fixtures written down
+  - [x] Report attribution + boundary rules verified
+  - [x] All assumption-challenge items dispositioned
 - [ ] **S4 — Code-quality review**
   - [ ] jscpd duplication scan run and triaged into findings
   - [ ] Larastan wired (config + baseline committed); real issues logged
