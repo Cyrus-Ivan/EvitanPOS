@@ -2,14 +2,20 @@
 
 namespace App\Support\Backup;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Facade;
 use RuntimeException;
 
 /**
  * Backup and restore of the single SQLite database file (Phase 16, Owner-only).
  *
- * Evitan POS is an offline, single-user desktop app whose SQLite connection uses
- * the default rollback journal (see config/database.php), so a plain file copy
- * taken from an idle menu action is a consistent snapshot. Before any restore we
+ * Evitan POS is an offline, single-user desktop app, so a file copy taken from
+ * an idle menu action is a consistent snapshot — but only after a WAL
+ * checkpoint: the packaged NativePHP runtime forces journal_mode=WAL on every
+ * boot, leaving recent commits in a -wal sidecar the copy would miss. Every
+ * backup therefore checkpoints first (a no-op under dev's rollback journal),
+ * and a restore removes the live database's stale -wal/-shm sidecars so old
+ * WAL frames can never replay over the restored file. Before any restore we
  * first snapshot the current live file, so a restore can itself be undone.
  *
  * Paths are injectable so tests can point at a temporary database + directory
@@ -26,7 +32,12 @@ class DatabaseBackupManager
 
     public function __construct(?string $databasePath = null, ?string $backupDirectory = null)
     {
-        $this->databasePath = $databasePath ?? (string) config('database.connections.sqlite.database');
+        // The live file must come from the ACTIVE connection: the packaged
+        // NativePHP runtime swaps the default to a "nativephp" connection
+        // pointing at the per-install userData directory, where the dev-time
+        // sqlite connection's path does not even exist.
+        $this->databasePath = $databasePath
+            ?? (string) config('database.connections.'.config('database.default').'.database');
         $this->backupDirectory = $backupDirectory ?? storage_path('backups');
     }
 
@@ -79,6 +90,8 @@ class DatabaseBackupManager
             throw new RuntimeException('The database file does not exist.');
         }
 
+        $this->checkpoint();
+
         $this->ensureDirectory();
 
         $filename = $this->newBackupFilename($prefix);
@@ -102,6 +115,8 @@ class DatabaseBackupManager
         if (! is_file($this->databasePath)) {
             throw new RuntimeException('The database file does not exist.');
         }
+
+        $this->checkpoint();
 
         if (! is_dir($destinationDirectory) || ! is_writable($destinationDirectory)) {
             throw new RuntimeException('The selected folder is not a writable directory.');
@@ -149,13 +164,48 @@ class DatabaseBackupManager
         }
 
         // Safety net: snapshot the current database before overwriting it, so the
-        // restore itself can be rolled back.
+        // restore itself can be rolled back. create() checkpoints the live WAL
+        // first, so the old database's sidecars are empty afterwards.
         if (is_file($this->databasePath)) {
             $this->create('pre-restore');
         }
 
+        // Close the app's own handle on the live file before overwriting it —
+        // but only when the active connection really is this file (tests
+        // inject throwaway paths and must never lose their own connection; the
+        // containerless unit tests have no facade root at all).
+        if (Facade::getFacadeApplication() !== null
+            && (string) config('database.connections.'.config('database.default').'.database') === $this->databasePath) {
+            DB::purge((string) config('database.default'));
+        }
+
         if (! copy($source, $this->databasePath)) {
             throw new RuntimeException('Failed to restore the database file.');
+        }
+
+        // Any leftover WAL/SHM sidecars belong to the overwritten database;
+        // letting SQLite "recover" them over the restored file would corrupt it.
+        @unlink($this->databasePath.'-wal');
+        @unlink($this->databasePath.'-shm');
+    }
+
+    /**
+     * Fold any WAL content into the main database file so a plain file copy is
+     * a complete snapshot. Under dev's rollback journal this is a no-op; a
+     * failed checkpoint must never block a backup — the main file is still a
+     * consistent (if slightly earlier) snapshot.
+     */
+    private function checkpoint(): void
+    {
+        try {
+            $pdo = new \PDO('sqlite:'.$this->databasePath, options: [
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            ]);
+
+            $pdo->exec('PRAGMA busy_timeout=5000');
+            $pdo->exec('PRAGMA wal_checkpoint(TRUNCATE)');
+        } catch (\Throwable) {
+            // Best effort — see docblock.
         }
     }
 

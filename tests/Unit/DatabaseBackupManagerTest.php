@@ -105,6 +105,65 @@ class DatabaseBackupManagerTest extends TestCase
         $this->assertStringContainsString('changed-data', (string) file_get_contents($this->backupDir.'/'.$preRestore[0]['name']));
     }
 
+    public function test_create_checkpoints_wal_content_into_the_backup(): void
+    {
+        // Switch the live DB to WAL (as the packaged NativePHP runtime does)
+        // and write a row that, before a checkpoint, lives only in the -wal
+        // sidecar a plain file copy would miss. The writer stays open so
+        // SQLite cannot auto-checkpoint on connection close.
+        $writer = new \PDO('sqlite:'.$this->dbPath);
+        $writer->exec('PRAGMA journal_mode=WAL');
+        $writer->exec("INSERT INTO marker (id) VALUES ('wal-only-data')");
+        $this->assertFileExists($this->dbPath.'-wal');
+        $this->assertStringNotContainsString('wal-only-data', (string) file_get_contents($this->dbPath));
+
+        $filename = $this->manager()->create();
+
+        $backup = new \PDO('sqlite:'.$this->backupDir.'/'.$filename);
+        $found = $backup->query("SELECT COUNT(*) FROM marker WHERE id = 'wal-only-data'")->fetchColumn();
+        $this->assertSame(1, (int) $found);
+        unset($writer, $backup);
+    }
+
+    public function test_restore_removes_stale_wal_sidecars(): void
+    {
+        $manager = $this->manager();
+
+        // A backup taken while the DB was still in rollback-journal mode.
+        $backupName = $manager->create();
+
+        // The live DB then moves to WAL and gains newer data; the open writer
+        // keeps the -wal/-shm sidecars on disk, as in the running app.
+        $writer = new \PDO('sqlite:'.$this->dbPath);
+        $writer->exec('PRAGMA journal_mode=WAL');
+        $writer->exec("INSERT INTO marker (id) VALUES ('newer-data')");
+        $this->assertFileExists($this->dbPath.'-wal');
+        $this->assertFileExists($this->dbPath.'-shm');
+
+        $manager->restore($backupName);
+
+        // Stale sidecars are gone — old WAL frames can never replay over the
+        // restored file — and the restored contents win.
+        $this->assertFileDoesNotExist($this->dbPath.'-wal');
+        $this->assertFileDoesNotExist($this->dbPath.'-shm');
+
+        $restored = new \PDO('sqlite:'.$this->dbPath);
+        $newer = $restored->query("SELECT COUNT(*) FROM marker WHERE id = 'newer-data'")->fetchColumn();
+        $this->assertSame(0, (int) $newer);
+
+        // The pre-restore safety backup captured the newer data first (the
+        // checkpoint folded it into the copied file).
+        $preRestore = array_values(array_filter(
+            $manager->list(),
+            fn ($b) => str_starts_with($b['name'], 'pre-restore-'),
+        ));
+        $this->assertCount(1, $preRestore);
+        $safety = new \PDO('sqlite:'.$this->backupDir.'/'.$preRestore[0]['name']);
+        $kept = $safety->query("SELECT COUNT(*) FROM marker WHERE id = 'newer-data'")->fetchColumn();
+        $this->assertSame(1, (int) $kept);
+        unset($writer, $restored, $safety);
+    }
+
     public function test_export_copies_the_database_into_an_external_directory(): void
     {
         $externalDir = $this->workDir.'/usb';
