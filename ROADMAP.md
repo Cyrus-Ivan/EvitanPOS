@@ -4,7 +4,7 @@
 
 This roadmap prioritizes building a **working application as early as possible**, while minimizing refactoring. Each phase should produce a usable milestone before moving to the next.
 
-> **Status:** Phases 0–18 are **complete** (✅). Remaining: Phase 19 (Release Preparation) — start from the handoff list at the top of `docs/phase-18-findings.md`. Confirm against `git log` and the code.
+> **Status:** All phases 0–19 are **complete** (✅) — first production release tagged `v1.0.0` (see `RELEASE-NOTES.md`). Confirm against `git log` and the code.
 
 ---
 
@@ -674,7 +674,7 @@ list**: `docs/phase-18-findings.md`.
 
 ---
 
-# Phase 19 — Release Preparation
+# Phase 19 — Release Preparation ✅
 
 ## Goal
 
@@ -701,6 +701,20 @@ Build NativePHP Executable
 Release Notes
 
 Create first production release.
+
+**Status: done (2026-07-19), tagged `v1.0.0`.** Linux AppImage + deb built via
+`native:build` and verified: bundle inspection (no APP_KEY/APP_ENV/APP_DEBUG in
+the shipped `.env`, no databases/backups/repo-internals inside, Evitan icons)
+and a fresh-`HOME` launch smoke (seeded owner with forced password change, 14
+immutability triggers migrated, WAL live, per-install `APP_KEY` generated,
+login serves 200, no queue worker). Beyond the packaging: once-per-launch
+provisioning (migrate → seed-if-empty → `inventory:reconcile`), per-install
+encryption key, WAL-aware backup/restore on the active connection, database
+session driver re-pinned in the native runtime, forced password change for
+seeded/reset accounts, Settings→About version surface, restore restart flow,
+and `RELEASE-NOTES.md`. Known deferrals live in the release notes (BIR ATP
+series config, raw-USB printer transport, physical-printer checklist per
+install). Windows/macOS builds are future work.
 
 ---
 

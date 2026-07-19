@@ -76,8 +76,10 @@ php artisan native:build  # Build the native desktop executable
 2. Run every gate: `php artisan test`, `./vendor/bin/pint --test`,
    `./vendor/bin/phpstan analyse --memory-limit=1G`, `npm run types`,
    `npm run lint:check`, `npm run build`, `npm run e2e`.
-3. Build: `php artisan native:build linux` — artifacts land in `dist/`
-   (`evitan-pos-<version>.AppImage` + `.deb`).
+3. Build: `php artisan native:build linux` — artifacts land in `dist/` as
+   `Evitan POS-<version>.AppImage` and `evitan-pos_<version>_amd64.deb`;
+   rename the AppImage to `evitan-pos-<version>.AppImage` (no spaces) before
+   distributing.
 4. Inspect the artifact before shipping: extract the AppImage
    (`--appimage-extract`) and confirm the bundled `.env` carries no
    `APP_KEY` / `APP_ENV` / `APP_DEBUG` (stripped via

@@ -97,7 +97,10 @@ return [
         '*/tests',
         // Project internals that must not ship inside the installer (the
         // built-in excludes only cover database/*.sqlite — tests/e2e/.runtime
-        // holds a seeded database copy).
+        // holds a seeded database copy, and storage/backups holds real
+        // database backups of the dev machine's data).
+        'storage/backups/*',
+        '.phpunit.result.cache',
         'tests',
         'docs',
         'test-results',
