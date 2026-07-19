@@ -1,11 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "evitan/pos",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Evitan POS — offline-first retail point of sale desktop app (Laravel + React + NativePHP + SQLite).",
     "keywords": [
-        "laravel",
-        "framework"
+        "pos",
+        "nativephp",
+        "laravel"
     ],
     "license": "MIT",
     "require": {

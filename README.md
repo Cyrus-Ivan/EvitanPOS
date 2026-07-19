@@ -61,12 +61,33 @@ Default development login: **`owner` / `password`**.
 
 ```bash
 php artisan test          # Pest / PHPUnit test suite
+npm run e2e               # Playwright E2E suite (isolated DB copy)
 npm run lint              # ESLint (auto-fix)
 npm run format            # Prettier
 ./vendor/bin/pint         # Laravel Pint (PHP formatting)
 npm run build             # Production frontend build
 php artisan native:build  # Build the native desktop executable
 ```
+
+## Building a release
+
+1. Bump the version default in `config/nativephp.php` and add an entry to
+   [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
+2. Run every gate: `php artisan test`, `./vendor/bin/pint --test`,
+   `./vendor/bin/phpstan analyse --memory-limit=1G`, `npm run types`,
+   `npm run lint:check`, `npm run build`, `npm run e2e`.
+3. Build: `php artisan native:build linux` — artifacts land in `dist/`
+   (`evitan-pos-<version>.AppImage` + `.deb`).
+4. Inspect the artifact before shipping: extract the AppImage
+   (`--appimage-extract`) and confirm the bundled `.env` carries no
+   `APP_KEY` / `APP_ENV` / `APP_DEBUG` (stripped via
+   `nativephp.cleanup_env_keys`), no `*.sqlite` files or repo internals are
+   inside, and `public/icon.png` is the Evitan mark.
+5. Smoke-test the installed app with a scratch `HOME`: first-launch seeding +
+   forced owner password change, a sale, a backup, a restore + restart.
+
+The packaged app provisions itself on every launch (migrate → seed-if-empty →
+stock reconcile) and generates a per-install `APP_KEY` on first boot.
 
 ## Architecture & invariants
 
@@ -88,7 +109,7 @@ Deeper documentation lives in the repo:
 
 ## Project status
 
-MVP under active development, building the `ROADMAP.md` phases in order. **Feature-complete through Phase 16**: the full commerce chain (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS, Transactions, Returns/Defects, Printing, Reports) and the full admin/ops track (User Management, Login History, Audit Logs, Backup/Restore). Remaining: UI Polish, Testing, and Release Preparation (Phases 17–19).
+**Released — v1.0.0** (see [`RELEASE-NOTES.md`](RELEASE-NOTES.md)). All 19 `ROADMAP.md` phases are complete: the full commerce chain (Setup, DB schema, Auth, Authorization, Settings, Inventory, Ledger, CSV Import/Export, POS, Transactions, Returns/Defects, Printing, Reports), the full admin/ops track (User Management, Login History, Audit Logs, Backup/Restore), UI polish, the Phase 18 final review (400+ backend tests, 10 Playwright E2E specs, DB-level immutability triggers), and release preparation.
 
 This summary is approximate — confirm current progress against `git log` and the code.
 
