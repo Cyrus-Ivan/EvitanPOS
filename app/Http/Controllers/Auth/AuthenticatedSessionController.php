@@ -41,6 +41,12 @@ class AuthenticatedSessionController extends Controller
         // out on its next request.
         $request->session()->put('boot_id', $sessions->currentBootId());
 
+        // Straight to the password page for a forced change (UX shortcut —
+        // RequirePasswordChange enforces it on every request regardless).
+        if ($request->user()->must_change_password) {
+            return redirect()->route('password.edit');
+        }
+
         return redirect()->intended(route('pos', absolute: false));
     }
 

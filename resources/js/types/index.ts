@@ -273,6 +273,10 @@ export interface User {
     name: string | null;
     username: string;
     role: UserRole;
+    // Set for accounts whose password someone else knows (seeded first-launch
+    // Owner, admin reset); the user is confined to the password page until
+    // they set their own.
+    must_change_password: boolean;
     avatar?: string;
     // Present on managed-user listings (Phase 13); set when the user is archived.
     deleted_at?: string | null;

@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnforceBootSession;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequirePasswordChange;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // is signed out (and short-circuited to login) before any page props
             // are shared. Self-guards on an authenticated user.
             EnforceBootSession::class,
+            // After the boot guard (a stale session signs out first, not
+            // bounce to the password page) and before Inertia shares props.
+            RequirePasswordChange::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

@@ -26,6 +26,10 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Owner',
                 'password' => Hash::make('password'),
                 'role' => UserRole::Owner,
+                // The default credentials are public knowledge, so a fresh
+                // install forces a new password at first login. Local dev gets
+                // the flag cleared again by DemoDataSeeder.
+                'must_change_password' => true,
             ],
         );
 

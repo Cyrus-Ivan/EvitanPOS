@@ -28,6 +28,7 @@ class User extends Authenticatable
         'username',
         'password',
         'role',
+        'must_change_password',
     ];
 
     /**
@@ -42,13 +43,14 @@ class User extends Authenticatable
     /**
      * Get the attributes that should be cast.
      *
-     * @return array{password: string, role: class-string<UserRole>}
+     * @return array{password: string, role: class-string<UserRole>, must_change_password: string}
      */
     protected function casts(): array
     {
         return [
             'password' => 'hashed',
             'role' => UserRole::class,
+            'must_change_password' => 'boolean',
         ];
     }
 

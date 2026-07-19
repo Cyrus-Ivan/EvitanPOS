@@ -117,7 +117,12 @@ class UserController extends Controller
     {
         Gate::authorize('manage', $user);
 
-        $user->update(['password' => Hash::make($request->validated()['password'])]);
+        $user->update([
+            'password' => Hash::make($request->validated()['password']),
+            // The admin knows this password; the user must replace it at
+            // their next login (RequirePasswordChange).
+            'must_change_password' => true,
+        ]);
 
         $sessions->forceLogout($user, 'Password reset by an administrator.');
 
