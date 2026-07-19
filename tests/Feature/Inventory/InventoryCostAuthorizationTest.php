@@ -97,6 +97,9 @@ class InventoryCostAuthorizationTest extends TestCase
 
     public function test_guests_are_redirected_to_login()
     {
+        // A user must exist — on a fresh install the setup wizard answers.
+        User::factory()->cashier()->create();
+
         $this->get(route('inventory'))->assertRedirect(route('login'));
     }
 }

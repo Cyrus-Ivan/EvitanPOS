@@ -9,6 +9,7 @@ use App\Support\Backup\DirectoryPicker;
 use App\Support\Backup\NativeDialogPicker;
 use App\Support\Boot\EncryptionKeyBootstrapper;
 use App\Support\Search\LikeQuery;
+use App\Support\Settings\ApplyBusinessTimezone;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureNativeRuntime();
+
+        // Apply the business timezone chosen during initial setup. Rescued
+        // because the settings table may not exist yet (first migrate, test
+        // bootstrap); the APP_TIMEZONE default stays in effect until it does.
+        rescue(fn () => (new ApplyBusinessTimezone)(), report: false);
 
         $this->registerAuthorizationGates();
 

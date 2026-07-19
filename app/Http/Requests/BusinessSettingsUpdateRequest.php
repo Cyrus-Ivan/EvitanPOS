@@ -21,6 +21,8 @@ class BusinessSettingsUpdateRequest extends FormRequest
             'business_address' => ['nullable', 'string', 'max:1000'],
             'tin' => ['nullable', 'string', 'max:50'],
             'receipt_footer' => ['nullable', 'string', 'max:500'],
+            'timezone' => ['required', 'timezone:all'],
+            'currency_symbol' => ['required', 'string', 'max:5'],
         ];
     }
 }

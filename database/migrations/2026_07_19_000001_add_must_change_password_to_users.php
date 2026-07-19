@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Phase 19 — forced password change. Set when an account's password is known
- * to someone besides its user (the seeded first-launch Owner, an admin
- * reset); cleared the moment the user sets their own. While set, a gate
- * middleware confines the session to the password-change page.
+ * to someone besides its user (an admin reset); cleared the moment the user
+ * sets their own. While set, a gate middleware confines the session to the
+ * password-change page.
  */
 return new class extends Migration
 {

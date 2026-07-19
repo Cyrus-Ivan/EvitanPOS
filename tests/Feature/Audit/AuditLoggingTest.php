@@ -187,6 +187,8 @@ class AuditLoggingTest extends TestCase
             'business_address' => '123 Main St',
             'tin' => '000-000-000',
             'receipt_footer' => 'Thank you!',
+            'timezone' => 'Asia/Manila',
+            'currency_symbol' => '₱',
         ])->assertSessionHasNoErrors();
 
         $log = AuditLog::where('action', 'settings.updated')->firstOrFail();

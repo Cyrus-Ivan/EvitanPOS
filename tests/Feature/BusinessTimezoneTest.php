@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Variant;
 use App\Support\Inventory\StockLedger;
 use App\Support\Printing\ReceiptContent;
+use App\Support\Settings\ApplyBusinessTimezone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -69,5 +71,34 @@ class BusinessTimezoneTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('reports', false)
                 ->has('rows', 0));
+    }
+
+    public function test_a_stored_timezone_setting_overrides_the_config_default(): void
+    {
+        $original = config('app.timezone');
+
+        try {
+            Setting::create(['key' => 'timezone', 'value' => 'America/New_York']);
+
+            (new ApplyBusinessTimezone)();
+
+            $this->assertSame('America/New_York', config('app.timezone'));
+            $this->assertSame('America/New_York', date_default_timezone_get());
+        } finally {
+            config(['app.timezone' => $original]);
+            date_default_timezone_set($original);
+        }
+    }
+
+    public function test_a_missing_or_invalid_timezone_setting_leaves_the_config_default(): void
+    {
+        // No setting row at all.
+        (new ApplyBusinessTimezone)();
+        $this->assertSame('Asia/Manila', config('app.timezone'));
+
+        // A corrupt value is ignored rather than applied.
+        Setting::create(['key' => 'timezone', 'value' => 'Mars/Olympus_Mons']);
+        (new ApplyBusinessTimezone)();
+        $this->assertSame('Asia/Manila', config('app.timezone'));
     }
 }

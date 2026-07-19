@@ -9,8 +9,9 @@ namespace App\Support\Printing;
  * and (optionally) a cash-drawer kick.
  *
  * Layout is sized in monospace columns to the paper width (58mm ≈ 32 cols,
- * 80mm ≈ 48 cols). The peso sign is not in the default thermal code page, so
- * money is prefixed with a plain "P".
+ * 80mm ≈ 48 cols). Money is prefixed with the configured currency symbol only
+ * when it is plain ASCII — the default thermal code page has no ₱ (or other
+ * extended glyphs), so anything else falls back to a plain "P".
  *
  * It never emits item cost — receipts are customer-facing.
  */
@@ -22,6 +23,8 @@ class EscPosReceiptBuilder
 
     private const COLUMNS = ['58mm' => 32, '80mm' => 48];
 
+    private string $moneyPrefix = 'P';
+
     /**
      * Build the full ESC/POS byte stream for the given receipt.
      *
@@ -31,6 +34,11 @@ class EscPosReceiptBuilder
     {
         $width = self::COLUMNS[$data['paper_size'] ?? '58mm'] ?? self::COLUMNS['58mm'];
         $business = $data['business'] ?? [];
+
+        // Use the configured currency symbol only when the thermal code page
+        // can print it (plain ASCII); otherwise keep the "P" fallback.
+        $symbol = (string) ($data['currency_symbol'] ?? '');
+        $this->moneyPrefix = $symbol !== '' && preg_match('/^[\x20-\x7E]+$/', $symbol) === 1 ? $symbol : 'P';
 
         $out = self::ESC.'@'; // initialise / reset
 
@@ -163,11 +171,12 @@ class EscPosReceiptBuilder
     }
 
     /**
-     * A peso amount for the printer: plain "P" prefix (the code page has no ₱).
+     * A money amount for the printer: the ASCII-safe currency prefix resolved
+     * in build() (plain "P" when the configured symbol can't be printed).
      */
     private function money(string|float|int $value): string
     {
-        return 'P'.$value;
+        return $this->moneyPrefix.$value;
     }
 
     private function clip(string $text, int $width): string

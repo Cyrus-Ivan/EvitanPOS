@@ -15,10 +15,11 @@ class NativeAppServiceProvider implements ProvidesPhpIni
      */
     public function boot(): void
     {
-        // Migrate + first-run seed + snapshot reconcile, before the window's
-        // first page load (and before ApplicationBooted mints the boot id into
-        // the database cache). The window must open even if this fails — the
-        // error lands in the log instead.
+        // Migrate + snapshot reconcile, before the window's first page load
+        // (and before ApplicationBooted mints the boot id into the database
+        // cache). A fresh install is not seeded — RequireInitialSetup routes
+        // it to the setup wizard instead. The window must open even if this
+        // fails — the error lands in the log instead.
         try {
             app(LaunchProvisioner::class)->run();
         } catch (Throwable $e) {

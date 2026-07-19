@@ -63,6 +63,7 @@ class ReceiptContent
                 'tin' => $business['tin'] ?? '',
             ],
             'footer' => $business['receipt_footer'] ?? '',
+            'currency_symbol' => $business['currency_symbol'] ?? '₱',
             'number' => (string) $transaction->transaction_number,
             'datetime' => $transaction->created_at
                 ?->timezone(config('app.timezone'))

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCurrency } from '@/hooks/use-currency';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Paginated, PaymentType, TransactionListRow, User } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
@@ -20,22 +21,17 @@ const PAYMENT: Record<PaymentType, { label: string; variant: 'default' | 'second
     others: { label: 'Others', variant: 'outline' },
 };
 
-function peso(value: string): string {
-    const number = Number(value);
-    return Number.isNaN(number) ? value : `₱${number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 function formatWhen(value: string): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
 }
 
-function discountLabel(row: TransactionListRow): string {
+function discountLabel(row: TransactionListRow, money: (value: number | string) => string): string {
     const amount = Number(row.discount);
     if (!row.discount_type || amount <= 0) {
         return '—';
     }
-    return row.discount_type === 'percentage' ? `${amount}%` : peso(row.discount);
+    return row.discount_type === 'percentage' ? `${amount}%` : money(row.discount);
 }
 
 interface Filters {
@@ -57,6 +53,8 @@ export default function Sales({
     paymentTypes: PaymentType[];
     filters: Filters;
 }) {
+    const { format: money } = useCurrency();
+
     const applyFilters = (next: Partial<Filters>) => {
         const merged = { ...filters, ...next };
         router.get(
@@ -165,8 +163,8 @@ export default function Sales({
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">{row.items_count}</TableCell>
-                                        <TableCell className="text-muted-foreground text-right tabular-nums">{discountLabel(row)}</TableCell>
-                                        <TableCell className="text-right font-medium tabular-nums">{peso(row.total)}</TableCell>
+                                        <TableCell className="text-muted-foreground text-right tabular-nums">{discountLabel(row, money)}</TableCell>
+                                        <TableCell className="text-right font-medium tabular-nums">{money(row.total)}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\Auth\Permissions;
+use App\Support\Settings\BusinessSettings;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -38,6 +39,9 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             'name' => config('app.name'),
+            // Business currency symbol for every money render. Rescued because
+            // the settings table may not exist yet on a fresh install.
+            'currency' => rescue(fn (): string => app(BusinessSettings::class)->all()['currency_symbol'], '₱', report: false),
             'auth' => [
                 'user' => $request->user(),
                 // Role hierarchy resolved server-side so the client never

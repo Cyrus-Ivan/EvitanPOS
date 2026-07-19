@@ -102,6 +102,7 @@ class ReceiptPrinter
                 'tin' => $business['tin'] ?? '',
             ],
             'footer' => 'This is a printer test.',
+            'currency_symbol' => $business['currency_symbol'] ?? '₱',
             'number' => 'TEST',
             'datetime' => $now,
             'cashier' => '-',

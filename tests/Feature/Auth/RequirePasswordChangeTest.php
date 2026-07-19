@@ -4,14 +4,13 @@ namespace Tests\Feature\Auth;
 
 use App\Models\AuditLog;
 use App\Models\User;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * Phase 19 — forced password change. A user whose password someone else knows
- * (the seeded first-launch Owner, or anyone after an administrative reset) is
- * confined to the password page until they set their own.
+ * (anyone after an administrative reset) is confined to the password page
+ * until they set their own.
  */
 class RequirePasswordChangeTest extends TestCase
 {
@@ -90,16 +89,6 @@ class RequirePasswordChangeTest extends TestCase
         ]);
 
         $this->assertTrue($cashier->refresh()->must_change_password);
-    }
-
-    public function test_the_seeded_owner_is_flagged(): void
-    {
-        // Outside the local environment DatabaseSeeder seeds only the baseline
-        // — exactly what a packaged first launch runs via LaunchProvisioner.
-        $this->seed(DatabaseSeeder::class);
-
-        $owner = User::query()->where('username', 'owner')->firstOrFail();
-        $this->assertTrue($owner->must_change_password);
     }
 
     public function test_a_normal_password_change_still_writes_the_audit_entry(): void

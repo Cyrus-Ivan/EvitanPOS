@@ -12,17 +12,35 @@ use Illuminate\Support\Facades\DB;
  */
 class BusinessSettings
 {
+    /**
+     * Every recognised key mapped to its default, applied at read time so the
+     * keys exist logically even before any row is written (a fresh install has
+     * none until the setup wizard completes).
+     *
+     * @var array<string, string>
+     */
+    public const DEFAULTS = [
+        'business_name' => 'Evitan POS',
+        'business_address' => '',
+        'tin' => '',
+        'receipt_footer' => '',
+        'timezone' => 'Asia/Manila',
+        'currency_symbol' => '₱',
+    ];
+
     /** @var list<string> */
     public const KEYS = [
         'business_name',
         'business_address',
         'tin',
         'receipt_footer',
+        'timezone',
+        'currency_symbol',
     ];
 
     /**
-     * Every business setting as a key => string map, defaulting missing keys to
-     * an empty string so the frontend form always has a value to bind to.
+     * Every business setting as a key => string map, falling back to the
+     * default for any key that has not been stored yet.
      *
      * @return array<string, string>
      */
@@ -30,8 +48,10 @@ class BusinessSettings
     {
         $stored = Setting::whereIn('key', self::KEYS)->pluck('value', 'key');
 
-        return collect(self::KEYS)
-            ->mapWithKeys(fn (string $key): array => [$key => (string) ($stored[$key] ?? '')])
+        return collect(self::DEFAULTS)
+            ->mapWithKeys(fn (string $default, string $key): array => [
+                $key => (string) ($stored[$key] ?? $default),
+            ])
             ->all();
     }
 

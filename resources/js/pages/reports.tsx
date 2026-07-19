@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AppLayout from '@/layouts/app-layout';
-import { formatPeso } from '@/lib/money';
+import { useCurrency } from '@/hooks/use-currency';
 import type { BreadcrumbItem, ReportChartBucket, ReportChartItem, ReportPeriod, ReportRow, ReportTotals } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { ChartColumn, ChevronLeft, ChevronRight, FileDown } from 'lucide-react';
@@ -83,6 +83,8 @@ export default function Reports({
     canViewCost: boolean;
     filters: Filters;
 }) {
+    const { format: money } = useCurrency();
+
     // Load the report for the same granularity anchored on a different date (the
     // ‹ › steppers pass filters.prev / filters.next; the picker passes its value).
     const goToDate = (date: string) => {
@@ -155,12 +157,12 @@ export default function Reports({
 
                 {/* Summary cards — recomputed net = gross − returns − defects. */}
                 <div className={'grid gap-3 sm:grid-cols-2 ' + (canViewCost ? 'lg:grid-cols-6' : 'lg:grid-cols-4')}>
-                    <StatCard label="Gross sales" value={formatPeso(totals.gross_sales)} />
-                    <StatCard label="Returns" value={formatPeso(totals.returns)} tone="negative" />
-                    <StatCard label="Defects" value={formatPeso(totals.defects)} tone="negative" />
-                    <StatCard label="Net sales" value={formatPeso(totals.net_sales)} tone="net" />
-                    {canViewCost && <StatCard label="Gross profit" value={formatPeso(totals.profit ?? '0')} tone="net" />}
-                    {canViewCost && <StatCard label="Uncosted sales" value={formatPeso(totals.uncosted_sales ?? '0')} tone="negative" />}
+                    <StatCard label="Gross sales" value={money(totals.gross_sales)} />
+                    <StatCard label="Returns" value={money(totals.returns)} tone="negative" />
+                    <StatCard label="Defects" value={money(totals.defects)} tone="negative" />
+                    <StatCard label="Net sales" value={money(totals.net_sales)} tone="net" />
+                    {canViewCost && <StatCard label="Gross profit" value={money(totals.profit ?? '0')} tone="net" />}
+                    {canViewCost && <StatCard label="Uncosted sales" value={money(totals.uncosted_sales ?? '0')} tone="negative" />}
                 </div>
 
                 {rows.length === 0 ? (
@@ -199,21 +201,21 @@ export default function Reports({
                                         <TableRow key={row.bucket}>
                                             <TableCell className="font-medium">{formatBucket(row.bucket, period)}</TableCell>
                                             <TableCell className="text-right tabular-nums">{row.transactions}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{formatPeso(row.gross_sales)}</TableCell>
+                                            <TableCell className="text-right tabular-nums">{money(row.gross_sales)}</TableCell>
                                             <TableCell className="text-muted-foreground text-right tabular-nums">
-                                                {Number(row.returns) > 0 ? `−${formatPeso(row.returns)}` : formatPeso(row.returns)}
+                                                {Number(row.returns) > 0 ? `−${money(row.returns)}` : money(row.returns)}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-right tabular-nums">
-                                                {Number(row.defects) > 0 ? `−${formatPeso(row.defects)}` : formatPeso(row.defects)}
+                                                {Number(row.defects) > 0 ? `−${money(row.defects)}` : money(row.defects)}
                                             </TableCell>
-                                            <TableCell className="text-right font-medium tabular-nums">{formatPeso(row.net_sales)}</TableCell>
+                                            <TableCell className="text-right font-medium tabular-nums">{money(row.net_sales)}</TableCell>
                                             {canViewCost && (
                                                 <TableCell className="text-muted-foreground text-right tabular-nums">
-                                                    {formatPeso(row.uncosted_sales ?? '0')}
+                                                    {money(row.uncosted_sales ?? '0')}
                                                 </TableCell>
                                             )}
                                             {canViewCost && (
-                                                <TableCell className="text-right tabular-nums">{formatPeso(row.profit ?? '0')}</TableCell>
+                                                <TableCell className="text-right tabular-nums">{money(row.profit ?? '0')}</TableCell>
                                             )}
                                         </TableRow>
                                     ))}
@@ -222,22 +224,22 @@ export default function Reports({
                                     <TableRow>
                                         <TableCell className="font-medium">Total</TableCell>
                                         <TableCell className="text-right tabular-nums">{totals.transactions}</TableCell>
-                                        <TableCell className="text-right tabular-nums">{formatPeso(totals.gross_sales)}</TableCell>
+                                        <TableCell className="text-right tabular-nums">{money(totals.gross_sales)}</TableCell>
                                         <TableCell className="text-muted-foreground text-right tabular-nums">
-                                            {Number(totals.returns) > 0 ? `−${formatPeso(totals.returns)}` : formatPeso(totals.returns)}
+                                            {Number(totals.returns) > 0 ? `−${money(totals.returns)}` : money(totals.returns)}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-right tabular-nums">
-                                            {Number(totals.defects) > 0 ? `−${formatPeso(totals.defects)}` : formatPeso(totals.defects)}
+                                            {Number(totals.defects) > 0 ? `−${money(totals.defects)}` : money(totals.defects)}
                                         </TableCell>
-                                        <TableCell className="text-right font-semibold tabular-nums">{formatPeso(totals.net_sales)}</TableCell>
+                                        <TableCell className="text-right font-semibold tabular-nums">{money(totals.net_sales)}</TableCell>
                                         {canViewCost && (
                                             <TableCell className="text-muted-foreground text-right font-semibold tabular-nums">
-                                                {formatPeso(totals.uncosted_sales ?? '0')}
+                                                {money(totals.uncosted_sales ?? '0')}
                                             </TableCell>
                                         )}
                                         {canViewCost && (
                                             <TableCell className="text-right font-semibold tabular-nums">
-                                                {formatPeso(totals.profit ?? '0')}
+                                                {money(totals.profit ?? '0')}
                                             </TableCell>
                                         )}
                                     </TableRow>

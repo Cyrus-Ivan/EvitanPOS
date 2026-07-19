@@ -7,19 +7,21 @@
     cost figure when $canViewCost is false.
 --}}
 @php
-    // ₱ peso formatter for the "0.00" money strings the controller emits.
-    $peso = fn ($value) => '₱' . number_format((float) $value, 2);
+    // Money formatter for the "0.00" strings the controller emits, using the
+    // business currency symbol (Business Settings; default ₱).
+    $symbol = ($business['currency_symbol'] ?? '') !== '' ? $business['currency_symbol'] : '₱';
+    $peso = fn ($value) => $symbol . number_format((float) $value, 2);
     // Returns/defects read as reductions; show them signed when non-zero.
     $minus = fn ($value) => (float) $value > 0 ? '−' . $peso($value) : $peso($value);
     $businessName = $business['business_name'] !== '' ? $business['business_name'] : 'Evitan POS';
 
-    // Compact peso for the chart's y-axis ticks: ₱1.2k / ₱3.4M, sign preserved.
-    $compact = function ($value) {
+    // Compact money for the chart's y-axis ticks: ₱1.2k / ₱3.4M, sign preserved.
+    $compact = function ($value) use ($symbol) {
         $sign = $value < 0 ? '−' : '';
         $abs = abs($value);
-        if ($abs >= 1000000) return $sign . '₱' . number_format($abs / 1000000, 1) . 'M';
-        if ($abs >= 1000) return $sign . '₱' . number_format($abs / 1000, 1) . 'k';
-        return $sign . '₱' . round($abs);
+        if ($abs >= 1000000) return $sign . $symbol . number_format($abs / 1000000, 1) . 'M';
+        if ($abs >= 1000) return $sign . $symbol . number_format($abs / 1000, 1) . 'k';
+        return $sign . $symbol . round($abs);
     };
     // Short x-axis label from the raw bucket key, mirroring the on-screen chart's
     // shortLabel: daily '%Y-%m-%d %H' → hour ('9a'); yearly '%Y-%m' → month abbr;
@@ -148,7 +150,7 @@
             <div class="plot" style="height: {{ $plotH }}px;">
                 {{-- Y-axis ticks: max at top, zero at the baseline, min at the bottom (only when negative). --}}
                 <div class="ylabel" style="top: -5px;">{{ $compact($domainMax) }}</div>
-                <div class="ylabel" style="top: {{ $zeroTop - 5 }}px;">₱0</div>
+                <div class="ylabel" style="top: {{ $zeroTop - 5 }}px;">{{ $symbol }}0</div>
                 @if ($domainMin < 0)
                     <div class="ylabel" style="top: {{ $plotH - 5 }}px;">{{ $compact($domainMin) }}</div>
                 @endif

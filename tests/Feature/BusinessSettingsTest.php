@@ -35,6 +35,8 @@ class BusinessSettingsTest extends TestCase
                 'business_address' => '123 Market St',
                 'tin' => '123-456-789',
                 'receipt_footer' => 'Thank you for shopping!',
+                'timezone' => 'Asia/Singapore',
+                'currency_symbol' => '$',
             ]);
 
         $response->assertSessionHasNoErrors()->assertRedirect();
@@ -43,6 +45,29 @@ class BusinessSettingsTest extends TestCase
         $this->assertSame('123 Market St', Setting::where('key', 'business_address')->value('value'));
         $this->assertSame('123-456-789', Setting::where('key', 'tin')->value('value'));
         $this->assertSame('Thank you for shopping!', Setting::where('key', 'receipt_footer')->value('value'));
+        $this->assertSame('Asia/Singapore', Setting::where('key', 'timezone')->value('value'));
+        $this->assertSame('$', Setting::where('key', 'currency_symbol')->value('value'));
+    }
+
+    public function test_timezone_and_currency_symbol_are_validated()
+    {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('business-settings.update'), [
+                'business_name' => 'Acme Retail',
+                'timezone' => 'Mars/Olympus_Mons',
+                'currency_symbol' => '₱',
+            ])
+            ->assertSessionHasErrors('timezone');
+
+        $this->actingAs($owner)
+            ->patch(route('business-settings.update'), [
+                'business_name' => 'Acme Retail',
+                'timezone' => 'Asia/Manila',
+                'currency_symbol' => 'too-long',
+            ])
+            ->assertSessionHasErrors('currency_symbol');
     }
 
     public function test_business_name_is_required()
@@ -73,6 +98,9 @@ class BusinessSettingsTest extends TestCase
 
     public function test_guests_cannot_update_business_settings()
     {
+        // A user must exist, else the setup-wizard gate answers first.
+        User::factory()->cashier()->create();
+
         $this
             ->patch(route('business-settings.update'), ['business_name' => 'Anon'])
             ->assertRedirect(route('login'));

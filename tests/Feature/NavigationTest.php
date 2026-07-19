@@ -42,6 +42,9 @@ class NavigationTest extends TestCase
     #[DataProvider('sectionRoutes')]
     public function test_guests_are_redirected_to_login(string $routeName)
     {
+        // A user must exist — on a fresh install the setup wizard answers.
+        User::factory()->cashier()->create();
+
         $this->get(route($routeName))->assertRedirect(route('login'));
     }
 

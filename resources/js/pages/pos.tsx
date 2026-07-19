@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AppLayout from '@/layouts/app-layout';
-import { formatPeso } from '@/lib/money';
+import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem, CartLine, DiscountType, Paginated, PaymentType, PosProduct } from '@/types';
 import { Head, router } from '@inertiajs/react';
@@ -30,6 +30,7 @@ const PAYMENT_LABELS: Record<PaymentType, string> = {
 };
 
 export default function Pos({ products, filters }: { products: Paginated<PosProduct>; filters: Filters }) {
+    const { symbol: currencySymbol, format: money } = useCurrency();
     const [search, setSearch] = useState(filters.search ?? '');
     const [cart, setCart] = useState<CartLine[]>([]);
     const [discountType, setDiscountType] = useState<DiscountType>('amount');
@@ -237,7 +238,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                                         <span className="line-clamp-2 font-medium">{product.label}</span>
                                         <span className="text-muted-foreground mt-0.5 text-xs tabular-nums">{product.sku ?? '—'}</span>
                                         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                                            <span className="font-semibold tabular-nums">{formatPeso(product.selling_price)}</span>
+                                            <span className="font-semibold tabular-nums">{money(product.selling_price)}</span>
                                             <Badge variant={outOfStock ? 'destructive' : 'secondary'} className="font-normal">
                                                 {outOfStock ? 'Out' : `${product.current_stock} ${product.unit}`}
                                             </Badge>
@@ -269,7 +270,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium">{line.label}</p>
                                         <p className="text-muted-foreground text-xs tabular-nums">
-                                            {formatPeso(line.unit_price)} × {line.quantity} = {formatPeso(line.unit_price * line.quantity)}
+                                            {money(line.unit_price)} × {line.quantity} = {money(line.unit_price * line.quantity)}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -326,7 +327,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                             onValueChange={(value) => value && setDiscountType(value as DiscountType)}
                         >
                             <ToggleGroupItem value="amount" className="px-3" aria-label="Amount discount">
-                                ₱
+                                {currencySymbol}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="percentage" className="px-3" aria-label="Percentage discount">
                                 %
@@ -345,15 +346,15 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                     <dl className="mt-3 space-y-1 text-sm">
                         <div className="flex justify-between">
                             <dt className="text-muted-foreground">Subtotal</dt>
-                            <dd className="tabular-nums">{formatPeso(subtotal)}</dd>
+                            <dd className="tabular-nums">{money(subtotal)}</dd>
                         </div>
                         <div className="flex justify-between">
                             <dt className="text-muted-foreground">Discount</dt>
-                            <dd className="tabular-nums">−{formatPeso(discountValue)}</dd>
+                            <dd className="tabular-nums">−{money(discountValue)}</dd>
                         </div>
                         <div className="flex justify-between text-base font-semibold">
                             <dt>Total</dt>
-                            <dd className="tabular-nums">{formatPeso(total)}</dd>
+                            <dd className="tabular-nums">{money(total)}</dd>
                         </div>
                     </dl>
 
@@ -396,7 +397,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                             />
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Change</span>
-                                <span className={cn('tabular-nums', insufficientCash && 'text-destructive')}>{formatPeso(Math.max(change, 0))}</span>
+                                <span className={cn('tabular-nums', insufficientCash && 'text-destructive')}>{money(Math.max(change, 0))}</span>
                             </div>
                         </div>
                     )}
@@ -427,7 +428,7 @@ export default function Pos({ products, filters }: { products: Paginated<PosProd
                             </>
                         ) : (
                             <>
-                                Checkout · {formatPeso(total)}
+                                Checkout · {money(total)}
                                 <kbd className="ml-1 rounded border px-1 font-sans text-[10px] opacity-70">F9</kbd>
                             </>
                         )}

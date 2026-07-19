@@ -7,10 +7,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Confines a user whose password is flagged for a forced change (the seeded
- * first-launch Owner, or anyone after an administrative reset) to the
- * password-change page until they set their own password. Enforcement lives
- * here; the login redirect to the same page is only a UX shortcut.
+ * Confines a user whose password is flagged for a forced change (anyone after
+ * an administrative reset) to the password-change page until they set their
+ * own password. Enforcement lives here; the login redirect to the same page
+ * is only a UX shortcut.
  */
 class RequirePasswordChange
 {

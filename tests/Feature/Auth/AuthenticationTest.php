@@ -12,6 +12,9 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_can_be_rendered()
     {
+        // A user must exist — on a fresh install the setup wizard answers.
+        User::factory()->create();
+
         $response = $this->get('/login');
 
         $response->assertStatus(200);

@@ -16,12 +16,21 @@ use App\Http\Controllers\PrinterSettingsController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\SetupController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Desktop app entry point: no public marketing page. Send everyone to the
 // POS screen; the auth middleware bounces guests to the login screen.
 Route::redirect('/', '/pos')->name('home');
+
+// Initial setup wizard (fresh install only). Pre-auth by design: no user
+// exists yet. RequireInitialSetup funnels every request here while that is
+// true and redirects these routes to login for installed apps.
+Route::get('setup', [SetupController::class, 'create'])->name('setup');
+Route::post('setup', [SetupController::class, 'store'])->name('setup.store');
+// OS print-queue detection for the wizard's printer step.
+Route::get('setup/printers', [PrinterSettingsController::class, 'printers'])->name('setup.printers');
 
 Route::middleware(['auth'])->group(function () {
     // Cashier-level: available to every authenticated user.

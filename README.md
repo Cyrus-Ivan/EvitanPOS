@@ -55,7 +55,9 @@ composer dev
 composer native:dev
 ```
 
-Default development login: **`owner` / `password`**.
+Default development login: **`owner` / `password`** (created by the local demo
+seed — `migrate:fresh --seed`). A packaged fresh install has no seeded account:
+the app opens an initial setup wizard that creates the Owner.
 
 ## Common commands
 
@@ -85,11 +87,13 @@ php artisan native:build  # Build the native desktop executable
    `APP_KEY` / `APP_ENV` / `APP_DEBUG` (stripped via
    `nativephp.cleanup_env_keys`), no `*.sqlite` files or repo internals are
    inside, and `public/icon.png` is the Evitan mark.
-5. Smoke-test the installed app with a scratch `HOME`: first-launch seeding +
-   forced owner password change, a sale, a backup, a restore + restart.
+5. Smoke-test the installed app with a scratch `HOME`: the initial setup
+   wizard (create the Owner, business details, timezone/currency, optional
+   printer), a sale, a backup, a restore + restart.
 
-The packaged app provisions itself on every launch (migrate → seed-if-empty →
-stock reconcile) and generates a per-install `APP_KEY` on first boot.
+The packaged app provisions itself on every launch (migrate → stock
+reconcile) and generates a per-install `APP_KEY` on first boot; a fresh
+install (no users yet) opens the setup wizard before anything else.
 
 ## Architecture & invariants
 

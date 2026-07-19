@@ -1,4 +1,5 @@
-import { formatPeso } from '@/lib/money';
+import { useCurrency } from '@/hooks/use-currency';
+import { formatMoneyCompact } from '@/lib/money';
 import type { ReportChartBucket, ReportChartItem, ReportPeriod } from '@/types';
 import { useState } from 'react';
 
@@ -39,15 +40,6 @@ function swatchFor(item: ReportChartItem, index: number): string {
     return item.key === OTHER_KEY ? 'bg-muted-foreground' : (SERIES_SWATCH[index] ?? 'bg-muted-foreground');
 }
 
-// Compact peso for axis ticks: ₱1.2k / ₱3.4M, sign preserved.
-function compactPeso(value: number): string {
-    const sign = value < 0 ? '-' : '';
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${sign}₱${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${sign}₱${(abs / 1_000).toFixed(1)}k`;
-    return `${sign}₱${Math.round(abs)}`;
-}
-
 const MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Sub-bucket → short axis label, matching the server's drill-down granularity:
@@ -85,6 +77,7 @@ function fullLabel(bucket: string, period: ReportPeriod): string {
 
 export default function SalesBarChart({ chart, items, period }: { chart: ReportChartBucket[]; items: ReportChartItem[]; period: ReportPeriod }) {
     const [hover, setHover] = useState<number | null>(null);
+    const { symbol, format } = useCurrency();
 
     if (chart.length === 0 || items.length === 0) {
         return null;
@@ -134,7 +127,7 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
                             strokeDasharray={value === 0 ? undefined : '3 3'}
                         />
                         <text x={PAD_L - 8} y={y(value) + 3} textAnchor="end" className="fill-muted-foreground text-[10px]">
-                            {compactPeso(value)}
+                            {formatMoneyCompact(value, symbol)}
                         </text>
                     </g>
                 ))}
@@ -188,7 +181,7 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
                                 onMouseEnter={() => setHover(i)}
                                 onMouseLeave={() => setHover(null)}
                             >
-                                <title>{`${fullLabel(col.bucket, period)}: ${formatPeso(col.net.toFixed(2))}`}</title>
+                                <title>{`${fullLabel(col.bucket, period)}: ${format(col.net.toFixed(2))}`}</title>
                             </rect>
 
                             {i % labelEvery === 0 && (
@@ -226,13 +219,13 @@ export default function SalesBarChart({ chart, items, period }: { chart: ReportC
                                 <div key={item.key} className="contents">
                                     <span className={'inline-block size-2 rounded-[2px] ' + swatchFor(item, s)} />
                                     <dt className="truncate">{item.name}</dt>
-                                    <dd className="text-popover-foreground text-right">{formatPeso(value.toFixed(2))}</dd>
+                                    <dd className="text-popover-foreground text-right">{format(value.toFixed(2))}</dd>
                                 </div>
                             );
                         })}
                         <span />
                         <dt className="font-medium">Net</dt>
-                        <dd className="text-popover-foreground text-right font-medium">{formatPeso(columns[hover].net.toFixed(2))}</dd>
+                        <dd className="text-popover-foreground text-right font-medium">{format(columns[hover].net.toFixed(2))}</dd>
                     </dl>
                 </div>
             )}

@@ -103,8 +103,9 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * The Owner comes from DatabaseSeeder when both run; created here too so
-     * this seeder also works standalone. Never creates a second Owner.
+     * The demo accounts, including the dev login owner/password. A production
+     * install never runs this — its Owner is created by the setup wizard.
+     * Never creates a second Owner.
      */
     private function seedUsers(): void
     {
@@ -112,11 +113,6 @@ class DemoDataSeeder extends Seeder
             ['username' => 'owner'],
             ['name' => 'Owner', 'password' => Hash::make('password'), 'role' => UserRole::Owner],
         );
-
-        // DatabaseSeeder flags the fresh owner for a forced password change
-        // (a production-install safeguard); in a demo-seeded dev environment
-        // the default login must keep working friction-free.
-        $this->owner->update(['must_change_password' => false]);
 
         $this->admin = User::firstOrCreate(
             ['username' => 'admin'],

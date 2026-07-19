@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCurrency } from '@/hooks/use-currency';
 import { usePermissions } from '@/hooks/use-permissions';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, PaymentType, SaleReturnEvent, SaleReturnType, TransactionDetail } from '@/types';
@@ -26,12 +27,11 @@ const RETURN_TYPE_BADGE: Record<SaleReturnType, 'secondary' | 'destructive' | 'o
     defect: 'outline',
 };
 
-function peso(value: string | null): string {
-    if (value === null) {
-        return '—';
-    }
-    const number = Number(value);
-    return Number.isNaN(number) ? value : `₱${number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+type MoneyFormatter = (value: number | string) => string;
+
+// Format a nullable money string, rendering null (a redacted cost) as a dash.
+function pesoOrDash(value: string | null, money: MoneyFormatter): string {
+    return value === null ? '—' : money(value);
 }
 
 function formatWhen(value: string): string {
@@ -44,12 +44,12 @@ function subtotalOf(transaction: TransactionDetail): number {
     return transaction.items.reduce((sum, line) => sum + Number(line.total), 0);
 }
 
-function discountLabel(transaction: TransactionDetail): string {
+function discountLabel(transaction: TransactionDetail, money: MoneyFormatter): string {
     const amount = Number(transaction.discount);
     if (!transaction.discount_type || amount <= 0) {
         return '—';
     }
-    return transaction.discount_type === 'percentage' ? `${amount}%` : peso(transaction.discount);
+    return transaction.discount_type === 'percentage' ? `${amount}%` : money(transaction.discount);
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -63,6 +63,7 @@ function Field({ label, value }: { label: string; value: string }) {
 
 export default function SalesShow({ transaction, canViewCost }: { transaction: TransactionDetail; canViewCost: boolean }) {
     const { hasRoleAtLeast } = usePermissions();
+    const { format: money } = useCurrency();
     const [dialogType, setDialogType] = useState<SaleReturnType | null>(null);
     const [printing, setPrinting] = useState(false);
 
@@ -115,13 +116,13 @@ export default function SalesShow({ transaction, canViewCost }: { transaction: T
                                         <TableRow key={line.id}>
                                             <TableCell className="font-medium">{line.label}</TableCell>
                                             <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{peso(line.selling_price)}</TableCell>
+                                            <TableCell className="text-right tabular-nums">{money(line.selling_price)}</TableCell>
                                             {canViewCost && (
                                                 <TableCell className="text-muted-foreground text-right tabular-nums">
-                                                    {peso(line.cost ?? null)}
+                                                    {pesoOrDash(line.cost ?? null, money)}
                                                 </TableCell>
                                             )}
-                                            <TableCell className="text-right tabular-nums">{peso(line.total)}</TableCell>
+                                            <TableCell className="text-right tabular-nums">{money(line.total)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -130,19 +131,19 @@ export default function SalesShow({ transaction, canViewCost }: { transaction: T
                                         <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                             Subtotal
                                         </TableCell>
-                                        <TableCell className="text-right tabular-nums">{peso(subtotalOf(transaction).toFixed(2))}</TableCell>
+                                        <TableCell className="text-right tabular-nums">{money(subtotalOf(transaction).toFixed(2))}</TableCell>
                                     </TableRow>
                                     <TableRow>
                                         <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                             Discount
                                         </TableCell>
-                                        <TableCell className="text-right tabular-nums">{discountLabel(transaction)}</TableCell>
+                                        <TableCell className="text-right tabular-nums">{discountLabel(transaction, money)}</TableCell>
                                     </TableRow>
                                     <TableRow>
                                         <TableCell colSpan={canViewCost ? 4 : 3} className="text-right font-semibold">
                                             Total
                                         </TableCell>
-                                        <TableCell className="text-right font-semibold tabular-nums">{peso(transaction.total)}</TableCell>
+                                        <TableCell className="text-right font-semibold tabular-nums">{money(transaction.total)}</TableCell>
                                     </TableRow>
                                     {transaction.payment_type === 'cash' && (
                                         <>
@@ -150,13 +151,13 @@ export default function SalesShow({ transaction, canViewCost }: { transaction: T
                                                 <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                                     Cash Received
                                                 </TableCell>
-                                                <TableCell className="text-right tabular-nums">{peso(transaction.cash_received)}</TableCell>
+                                                <TableCell className="text-right tabular-nums">{pesoOrDash(transaction.cash_received, money)}</TableCell>
                                             </TableRow>
                                             <TableRow>
                                                 <TableCell colSpan={canViewCost ? 4 : 3} className="text-muted-foreground text-right">
                                                     Change
                                                 </TableCell>
-                                                <TableCell className="text-right tabular-nums">{peso(transaction.change)}</TableCell>
+                                                <TableCell className="text-right tabular-nums">{pesoOrDash(transaction.change, money)}</TableCell>
                                             </TableRow>
                                         </>
                                     )}
@@ -225,6 +226,8 @@ export default function SalesShow({ transaction, canViewCost }: { transaction: T
 }
 
 function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canViewCost: boolean }) {
+    const { format: money } = useCurrency();
+
     return (
         <div className="rounded-lg border">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
@@ -250,9 +253,9 @@ function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canVi
                                 <TableCell className="font-medium">{line.label}</TableCell>
                                 <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
                                 {canViewCost && (
-                                    <TableCell className="text-muted-foreground text-right tabular-nums">{peso(line.cost ?? null)}</TableCell>
+                                    <TableCell className="text-muted-foreground text-right tabular-nums">{pesoOrDash(line.cost ?? null, money)}</TableCell>
                                 )}
-                                <TableCell className="text-right tabular-nums">{peso(line.refund_amount)}</TableCell>
+                                <TableCell className="text-right tabular-nums">{money(line.refund_amount)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -261,7 +264,7 @@ function ReturnEventCard({ event, canViewCost }: { event: SaleReturnEvent; canVi
                             <TableCell colSpan={canViewCost ? 3 : 2} className="text-right font-semibold">
                                 {event.type === 'defect' ? 'Written off' : 'Total refund'}
                             </TableCell>
-                            <TableCell className="text-right font-semibold tabular-nums">{peso(event.total_refund)}</TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums">{money(event.total_refund)}</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>

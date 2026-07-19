@@ -95,7 +95,9 @@ Implement
 * Admin
 * Cashier
 
-Seed default Owner account.
+Seed default Owner account. *(Superseded post-v1.0.0: the Owner is now created
+by the initial setup wizard on first launch; only the local demo seed still
+creates the `owner` / `password` dev login.)*
 
 **Milestone**
 
@@ -715,6 +717,17 @@ seeded/reset accounts, Settings→About version surface, restore restart flow,
 and `RELEASE-NOTES.md`. Known deferrals live in the release notes (BIR ATP
 series config, raw-USB printer transport, physical-printer checklist per
 install). Windows/macOS builds are future work.
+
+**Post-release amendment (2026-07-20, targeting v1.1.0):** the seeded
+`owner` / `password` account and its first-login forced password change were
+replaced by a pre-login **initial setup wizard** (`/setup`, gated by
+`RequireInitialSetup` on the absence of any user, archived included). The
+wizard atomically creates the Owner, business identity, the new
+timezone/currency-symbol settings, and optional printer configuration, then
+signs the Owner in. `LaunchProvisioner` no longer seeds (migrate + reconcile
+only); `DatabaseSeeder` seeds settings defaults only; the local demo seed
+still provides the dev login. `must_change_password` remains for
+administrative resets.
 
 ---
 

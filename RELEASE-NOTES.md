@@ -1,5 +1,26 @@
 # Evitan POS — Release Notes
 
+## v1.1.0 (unreleased)
+
+- **Initial setup wizard.** A fresh install no longer ships a seeded
+  `owner` / `password` account. On first launch the app opens a pre-login
+  wizard that creates the Owner account (your own name, username, and
+  password), the business identity (name, address, TIN, receipt footer), the
+  business timezone and currency symbol, and — optionally, skippable — the
+  receipt printer. One atomic submit; the app then signs you straight in.
+  Existing installs and restored backups never see the wizard.
+- **New settings: timezone & currency symbol.** Both are editable later under
+  Business Settings and apply across reports, receipts, and the POS. Defaults:
+  `Asia/Manila` and `₱`.
+- Forced password change remains for accounts whose password an admin reset.
+
+### First launch (v1.1.0+)
+
+1. The app creates its database automatically and opens the setup wizard.
+2. Create your Owner account and enter your business details.
+3. Configure the printer now or skip it — it lives in Business Settings.
+4. You land signed in on the POS screen; add categories, items, and stock.
+
 ## v1.0.0 (2026-07-19)
 
 First production release. **Linux only** (AppImage + Debian package), built with
@@ -82,5 +103,6 @@ stock-ledger reconcile run on launch to finish the restore.
 
 - [ ] Physical receipt printer: configure transport, run a test print, one
       real sale print, one reprint, cash-drawer kick.
-- [ ] First-launch flow: forced owner password change completed.
+- [ ] First-launch flow: initial setup wizard completed (v1.0.0: forced owner
+      password change).
 - [ ] Backup created and restored once; app restarted after restore.

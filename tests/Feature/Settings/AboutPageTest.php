@@ -24,6 +24,9 @@ class AboutPageTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
+        // A user must exist — on a fresh install the setup wizard answers.
+        User::factory()->cashier()->create();
+
         $this->get(route('about'))->assertRedirect(route('login'));
     }
 }

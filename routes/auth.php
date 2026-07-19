@@ -6,8 +6,9 @@ use Illuminate\Support\Facades\Route;
 
 // Evitan POS auth is intentionally minimal: username + password only. There is
 // no self-registration, no email verification, and no email-based password
-// reset (accounts are provisioned by the Owner/Admin — see Phase 13). Password
-// changes happen from Settings; Owner/Admin reset a user's password directly.
+// reset (the Owner is created by the initial setup wizard; every other account
+// is provisioned by the Owner/Admin — see Phase 13). Password changes happen
+// from Settings; Owner/Admin reset a user's password directly.
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

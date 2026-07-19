@@ -3,7 +3,9 @@
 use App\Http\Middleware\EnforceBootSession;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequireInitialSetup;
 use App\Http\Middleware\RequirePasswordChange;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            // First: a fresh install (no users at all) is routed to the setup
+            // wizard before any auth-flavoured guard runs — none of them can
+            // apply on an empty database.
+            RequireInitialSetup::class,
             // Runs after StartSession and before Inertia so a stale-boot session
             // is signed out (and short-circuited to login) before any page props
             // are shared. Self-guards on an authenticated user.
@@ -34,6 +40,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
         ]);
+
+        // The middleware sorter pulls priority-listed entries (the auth
+        // middleware, via its AuthenticatesRequests contract) ahead of
+        // everything appended to the web group. The setup gate must answer
+        // before auth — a fresh install has no one to authenticate — so slot
+        // it into the priority list just before the auth entry.
+        $middleware->prependToPriorityList(
+            AuthenticatesRequests::class,
+            RequireInitialSetup::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
