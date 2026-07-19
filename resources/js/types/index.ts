@@ -43,7 +43,7 @@ export interface FlashToast {
 export interface SharedData {
     name: string;
     auth: Auth;
-    flash: { toast?: FlashToast | null };
+    flash: { toast?: FlashToast | null; restart_required?: boolean };
     [key: string]: unknown;
 }
 

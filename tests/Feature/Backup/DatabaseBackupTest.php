@@ -128,7 +128,9 @@ class DatabaseBackupTest extends TestCase
         $this->actingAs($owner)
             ->post(route('backup.restore'), ['filename' => $backupName])
             ->assertRedirect()
-            ->assertSessionHas('toast.type', 'success');
+            ->assertSessionHas('toast.type', 'success')
+            // The backup page turns this into a persistent restart banner.
+            ->assertSessionHas('restart_required', true);
 
         // Live DB restored to the backup's contents.
         $this->assertStringContainsString('live-data', (string) file_get_contents($this->dbPath));
@@ -181,10 +183,27 @@ class DatabaseBackupTest extends TestCase
         $this->actingAs(User::factory()->owner()->create())
             ->post(route('backup.restore-external'))
             ->assertRedirect()
-            ->assertSessionHas('toast.type', 'success');
+            ->assertSessionHas('toast.type', 'success')
+            ->assertSessionHas('restart_required', true);
 
         $this->assertStringContainsString('external-data', (string) file_get_contents($this->dbPath));
         $this->assertNotEmpty(glob($this->backupDir.'/pre-restore-*.sqlite'));
+    }
+
+    public function test_app_restart_is_unavailable_outside_the_native_runtime(): void
+    {
+        // The relaunch endpoint only exists for the desktop app; in a plain
+        // web/test environment it must look like it isn't there at all.
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('app.restart'))
+            ->assertNotFound();
+    }
+
+    public function test_app_restart_is_owner_only(): void
+    {
+        foreach ([User::factory()->admin()->create(), User::factory()->cashier()->create()] as $user) {
+            $this->actingAs($user)->post(route('app.restart'))->assertForbidden();
+        }
     }
 
     public function test_admin_and_cashier_are_forbidden(): void

@@ -71,10 +71,7 @@ class BackupController extends Controller
             new: ['filename' => $validated['filename']],
         );
 
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => 'Database restored. A safety backup of the previous database was taken automatically.',
-        ]);
+        return $this->restoredResponse();
     }
 
     /**
@@ -134,10 +131,23 @@ class BackupController extends Controller
             new: ['source' => $file],
         );
 
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => 'Database restored. A safety backup of the previous database was taken automatically.',
-        ]);
+        return $this->restoredResponse();
+    }
+
+    /**
+     * The shared post-restore response: the app must be restarted so the
+     * launch provisioning (migrations + stock reconcile) runs against the
+     * restored file — the flag drives a persistent banner with a Restart
+     * button on the backup page.
+     */
+    private function restoredResponse(): RedirectResponse
+    {
+        return back()
+            ->with('toast', [
+                'type' => 'success',
+                'message' => 'Database restored. Restart Evitan POS to finish — a safety backup of the previous database was taken automatically.',
+            ])
+            ->with('restart_required', true);
     }
 
     private function lastExternalDirectory(): ?string

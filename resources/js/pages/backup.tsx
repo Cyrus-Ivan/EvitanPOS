@@ -3,9 +3,9 @@ import EmptyState from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
-import { DatabaseBackup, HardDrive, LoaderCircle, Upload } from 'lucide-react';
+import type { BreadcrumbItem, SharedData } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import { DatabaseBackup, HardDrive, LoaderCircle, RotateCw, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Database Backup', href: '/backup' }];
@@ -23,7 +23,18 @@ function formatWhen(value: string): string {
 
 export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDesktop: boolean }) {
     const confirm = useConfirm();
+    const { flash } = usePage<SharedData>().props;
     const [processing, setProcessing] = useState(false);
+    // Flash only lives for one response; keep the banner up until relaunch.
+    const [restartRequired, setRestartRequired] = useState(false);
+    if (flash.restart_required && !restartRequired) {
+        setRestartRequired(true);
+    }
+
+    const restartApp = () => {
+        setProcessing(true);
+        router.post(route('app.restart'), {}, { preserveScroll: true, onFinish: () => setProcessing(false) });
+    };
 
     const createBackup = () => {
         setProcessing(true);
@@ -40,7 +51,9 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
             await confirm({
                 title: 'Restore from a file?',
                 description:
-                    'Choose a database file to restore. This replaces the current database. A safety backup of the current database is taken automatically before restoring.',
+                    'Choose a database file to restore. This replaces the current database. A safety backup of the current database is taken automatically before restoring. ' +
+                    'Restoring an older backup permanently discards sales made after it was created, and their receipt numbers will be reissued to future sales. ' +
+                    'After restoring, restart Evitan POS to finish.',
                 destructive: true,
                 confirmLabel: 'Choose file…',
             })
@@ -57,7 +70,9 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
             await confirm({
                 title: `Restore "${backup.name}"?`,
                 description:
-                    'This replaces the current database with the selected backup. A safety backup of the current database is taken automatically before restoring.',
+                    'This replaces the current database with the selected backup. A safety backup of the current database is taken automatically before restoring. ' +
+                    'Restoring an older backup permanently discards sales made after it was created, and their receipt numbers will be reissued to future sales. ' +
+                    'After restoring, restart Evitan POS to finish.',
                 destructive: true,
                 confirmLabel: 'Restore',
             })
@@ -88,6 +103,22 @@ export default function Backup({ backups, isDesktop }: { backups: Backup[]; isDe
                         </Button>
                     </div>
                 </div>
+
+                {restartRequired && (
+                    <div
+                        role="alert"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm"
+                    >
+                        <p>
+                            Database restored. Restart Evitan POS to finish — stock counts are re-checked against the ledger on launch.
+                        </p>
+                        {isDesktop && (
+                            <Button size="sm" variant="outline" onClick={restartApp} disabled={processing}>
+                                <RotateCw className="size-4" /> Restart now
+                            </Button>
+                        )}
+                    </div>
+                )}
 
                 {backups.length === 0 ? (
                     <EmptyState

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppRestartController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BusinessSettingsController;
@@ -107,6 +108,8 @@ Route::middleware(['auth'])->group(function () {
         // Back up to / restore from an external drive via native OS dialogs.
         Route::post('backup/external', [BackupController::class, 'exportExternal'])->name('backup.external');
         Route::post('backup/restore-external', [BackupController::class, 'restoreExternal'])->name('backup.restore-external');
+        // Relaunch the desktop app after a restore (native runtime only).
+        Route::post('app/restart', AppRestartController::class)->name('app.restart');
     });
 });
 
