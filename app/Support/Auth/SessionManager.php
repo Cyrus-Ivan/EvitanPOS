@@ -11,12 +11,13 @@ use Illuminate\Support\Str;
 /**
  * Owns the login-history lifecycle for the desktop app.
  *
- * NativePHP forces the session driver to `file`, so sessions are stored on disk
- * and survive an unclean exit (window closed, OS shutdown, crash, or force-kill)
- * — the DB `sessions` table is empty in the native runtime. We therefore cannot
- * detect an interrupted session by reconciling that table. Instead, every app
- * run mints a fresh "boot id"; a session stamped with an older id outlived the
- * run that created it and is treated as an unclean exit (see EnforceBootSession).
+ * Sessions are database-backed in every runtime (the native runtime's vendor
+ * default of `file` is re-pinned to `database` in AppServiceProvider), but
+ * either way session rows survive an unclean exit (window closed, OS shutdown,
+ * crash, or force-kill), so an interrupted session cannot be detected from
+ * storage alone. Instead, every app run mints a fresh "boot id"; a session
+ * stamped with an older id outlived the run that created it and is treated as
+ * an unclean exit (see EnforceBootSession).
  */
 class SessionManager
 {
@@ -85,9 +86,9 @@ class SessionManager
 
     /**
      * Administratively evict a user (e.g. after an Owner/Admin resets their
-     * password) so they must sign in again. Records the event and, defensively,
-     * clears any database-backed session rows for them (a no-op under the native
-     * file-session driver, but correct should the driver ever be `database`).
+     * password) so they must sign in again. Records the event and clears the
+     * user's session rows — effective in every runtime now that the native
+     * runtime also uses the database session driver.
      */
     public function forceLogout(User $target, ?string $reason = null): void
     {

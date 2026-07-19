@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Support\Boot\LaunchProvisioner;
 use Native\Laravel\Contracts\ProvidesPhpIni;
 use Native\Laravel\Facades\Window;
+use Throwable;
 
 class NativeAppServiceProvider implements ProvidesPhpIni
 {
@@ -13,6 +15,16 @@ class NativeAppServiceProvider implements ProvidesPhpIni
      */
     public function boot(): void
     {
+        // Migrate + first-run seed + snapshot reconcile, before the window's
+        // first page load (and before ApplicationBooted mints the boot id into
+        // the database cache). The window must open even if this fails — the
+        // error lands in the log instead.
+        try {
+            app(LaunchProvisioner::class)->run();
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         Window::open()
             ->title('Evitan POS')
             ->width(1280)

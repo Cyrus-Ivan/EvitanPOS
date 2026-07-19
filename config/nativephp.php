@@ -15,7 +15,7 @@ return [
      * usually in the form of a reverse domain name.
      * For example: com.nativephp.app
      */
-    'app_id' => env('NATIVEPHP_APP_ID', 'com.nativephp.app'),
+    'app_id' => env('NATIVEPHP_APP_ID', 'com.evitan.pos'),
 
     /**
      * If your application allows deep linking, you can specify the scheme
@@ -31,22 +31,22 @@ return [
     /**
      * The author of your application.
      */
-    'author' => env('NATIVEPHP_APP_AUTHOR'),
+    'author' => env('NATIVEPHP_APP_AUTHOR', 'Evitan POS'),
 
     /**
      * The copyright notice for your application.
      */
-    'copyright' => env('NATIVEPHP_APP_COPYRIGHT'),
+    'copyright' => env('NATIVEPHP_APP_COPYRIGHT', '© 2026 Evitan POS'),
 
     /**
      * The description of your application.
      */
-    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'An awesome app built with NativePHP'),
+    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'Offline-first retail point of sale'),
 
     /**
      * The Website of your application.
      */
-    'website' => env('NATIVEPHP_APP_WEBSITE', 'https://nativephp.com'),
+    'website' => env('NATIVEPHP_APP_WEBSITE', ''),
 
     /**
      * The default service provider for your application. This provider
@@ -61,6 +61,13 @@ return [
      * You may use wildcards to match multiple keys.
      */
     'cleanup_env_keys' => [
+        // Never ship the dev key/env: without APP_KEY the packaged app
+        // generates a per-install key (EncryptionKeyBootstrapper), and absent
+        // APP_ENV/APP_DEBUG Laravel defaults to production/false (the runtime
+        // also injects both via the process environment).
+        'APP_KEY',
+        'APP_ENV',
+        'APP_DEBUG',
         'AWS_*',
         'AZURE_*',
         'GITHUB_*',
@@ -88,6 +95,19 @@ return [
         'content',
         'node_modules',
         '*/tests',
+        // Project internals that must not ship inside the installer (the
+        // built-in excludes only cover database/*.sqlite — tests/e2e/.runtime
+        // holds a seeded database copy).
+        'tests',
+        'docs',
+        'test-results',
+        '.claude',
+        'CLAUDE.md',
+        'BRAINSTORM.md',
+        'ROADMAP.md',
+        'playwright.config.ts',
+        'phpstan.neon',
+        'phpstan-baseline.neon',
     ],
 
     /**
@@ -98,8 +118,13 @@ return [
          * Whether or not the updater is enabled. Please note that the
          * updater will only work when your application is bundled
          * for production.
+         *
+         * Disabled for Evitan POS: the app is offline-first with no update
+         * feed configured — leaving this on makes every launch fire a failing
+         * update check against the empty provider below. Releases are
+         * installed manually.
          */
-        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', true),
+        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', false),
 
         /**
          * The updater provider to use.
@@ -142,21 +167,18 @@ return [
 
     /**
      * The queue workers that get auto-started on your application start.
+     * Evitan POS queues nothing (no jobs, no ShouldQueue anywhere), so no
+     * always-on worker process is spawned.
      */
-    'queue_workers' => [
-        'default' => [
-            'queues' => ['default'],
-            'memory_limit' => 128,
-            'timeout' => 60,
-            'sleep' => 3,
-        ],
-    ],
+    'queue_workers' => [],
 
     /**
      * Define your own scripts to run before and after the build process.
+     * Note: a failing prebuild does NOT abort native:build — the release
+     * procedure still runs `npm run build` as an explicit gate first.
      */
     'prebuild' => [
-        // 'npm run build',
+        'npm run build',
     ],
 
     'postbuild' => [

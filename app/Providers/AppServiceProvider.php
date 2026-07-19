@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Auth\SessionManager;
 use App\Support\Backup\DirectoryPicker;
 use App\Support\Backup\NativeDialogPicker;
+use App\Support\Boot\EncryptionKeyBootstrapper;
 use App\Support\Search\LikeQuery;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(DirectoryPicker::class, NativeDialogPicker::class);
+
+        // Packaged builds ship without an APP_KEY; generate a per-install one
+        // on first use. Runs after the NativePHP provider's register phase, so
+        // storage_path() already points at the per-install userData directory.
+        (new EncryptionKeyBootstrapper)->ensure();
     }
 
     /**
@@ -28,6 +34,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureNativeRuntime();
+
         $this->registerAuthorizationGates();
 
         // Wildcard-safe LIKE search macros (whereLike / orWhereLike / whereLikeAny).
@@ -41,6 +49,31 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ApplicationBooted::class, function (): void {
             app(SessionManager::class)->handleBoot();
         });
+    }
+
+    /**
+     * Overrides for the NativePHP runtime, applied after the vendor provider
+     * has configured itself (app providers boot last, so these values stick).
+     */
+    private function configureNativeRuntime(): void
+    {
+        if (! config('nativephp-internal.running')) {
+            return;
+        }
+
+        // NativePHP forces file sessions; re-pin the database driver so
+        // SessionManager::forceLogout()'s row deletion actually evicts users
+        // and sessions stay inspectable. The sessions table always exists
+        // before the first request: the packaged runtime migrates on install
+        // and LaunchProvisioner migrates on every launch.
+        config(['session.driver' => 'database']);
+
+        // The vendor builds the packaged "nativephp" connection without a
+        // busy_timeout, so concurrent workers would fail SQLITE_BUSY instantly
+        // instead of waiting (its boot-time PRAGMA only covers that one PDO).
+        if (config()->has('database.connections.nativephp')) {
+            config(['database.connections.nativephp.busy_timeout' => 5000]);
+        }
     }
 
     /**
