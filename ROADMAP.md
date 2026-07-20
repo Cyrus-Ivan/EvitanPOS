@@ -718,7 +718,7 @@ and `RELEASE-NOTES.md`. Known deferrals live in the release notes (BIR ATP
 series config, raw-USB printer transport, physical-printer checklist per
 install). Windows/macOS builds are future work.
 
-**Post-release amendment (2026-07-20, targeting v1.1.0):** the seeded
+**Amendment (2026-07-20, folded into v1.0.0):** the seeded
 `owner` / `password` account and its first-login forced password change were
 replaced by a pre-login **initial setup wizard** (`/setup`, gated by
 `RequireInitialSetup` on the absence of any user, archived included). The

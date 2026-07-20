@@ -1,33 +1,22 @@
 # Evitan POS — Release Notes
 
-## v1.1.0 (unreleased)
-
-- **Initial setup wizard.** A fresh install no longer ships a seeded
-  `owner` / `password` account. On first launch the app opens a pre-login
-  wizard that creates the Owner account (your own name, username, and
-  password), the business identity (name, address, TIN, receipt footer), the
-  business timezone and currency symbol, and — optionally, skippable — the
-  receipt printer. One atomic submit; the app then signs you straight in.
-  Existing installs and restored backups never see the wizard.
-- **New settings: timezone & currency symbol.** Both are editable later under
-  Business Settings and apply across reports, receipts, and the POS. Defaults:
-  `Asia/Manila` and `₱`.
-- Forced password change remains for accounts whose password an admin reset.
-
-### First launch (v1.1.0+)
-
-1. The app creates its database automatically and opens the setup wizard.
-2. Create your Owner account and enter your business details.
-3. Configure the printer now or skip it — it lives in Business Settings.
-4. You land signed in on the POS screen; add categories, items, and stock.
-
-## v1.0.0 (2026-07-19)
+## v1.0.0 (2026-07-20)
 
 First production release. **Linux only** (AppImage + Debian package), built with
 NativePHP (Electron) over Laravel 12 + React 19 + SQLite.
 
 ### What's in the box
 
+- **Guided first-run setup** — a fresh install ships **no default credentials**.
+  On first launch a pre-login setup wizard creates the Owner account, the
+  business identity (name, address, TIN, receipt footer), the business timezone
+  and currency symbol, and — optionally — the receipt printer, in one atomic
+  step, then signs you straight in. Existing installs and restored backups never
+  see the wizard.
+- **Configurable timezone & currency** — business timezone (default
+  `Asia/Manila`) and currency symbol (default `₱`), set in the wizard and
+  editable later under Business Settings; both apply across the POS, reports, and
+  receipts.
 - **Point of sale** — product grid with search (name / SKU / barcode), barcode
   scanner support, cart with quantity editing, amount/percentage discounts,
   cash / cashless / others payment types, cash-received with automatic change,
@@ -60,11 +49,17 @@ NativePHP (Electron) over Laravel 12 + React 19 + SQLite.
 
 ### First launch
 
-1. The app creates its database and seeds the initial account automatically.
-2. Sign in with **`owner` / `password`**.
-3. You will be required to **set a new password** before anything else works.
-4. Configure the business identity (name, address, TIN, receipt footer) and
-   printer under Business Settings, then add categories, items, and stock.
+1. The app creates its database automatically and opens the **setup wizard** —
+   no default account ships.
+2. Create your Owner account (your name, username, and password) and enter your
+   business details (name, address, TIN, receipt footer).
+3. Pick your timezone and currency symbol, then configure the receipt printer or
+   skip it — it lives in Business Settings.
+4. One submit signs you straight in on the POS screen; add categories, items,
+   and stock.
+
+Forced password change remains only for accounts whose password an admin later
+resets.
 
 ### Where your data lives
 
@@ -92,8 +87,9 @@ stock-ledger reconcile run on launch to finish the restore.
   are not supported yet; use USB-as-device-file, Bluetooth, network, or the OS
   print queue. Test your printer with **Business Settings → Test print**
   before going live.
-- **Timezone is fixed to Asia/Manila** (receipts, report buckets, daily
-  sequences).
+- **Timezone is chosen once at setup** and used everywhere (receipts, report
+  buckets, daily sequences). Change it later under Business Settings, but keep it
+  stable — historical timestamps are stored in the business timezone.
 - **No auto-update.** Install new releases manually over the old one — your
   data directory is preserved.
 - **Restoring an older backup** permanently discards sales made after it was
@@ -103,6 +99,6 @@ stock-ledger reconcile run on launch to finish the restore.
 
 - [ ] Physical receipt printer: configure transport, run a test print, one
       real sale print, one reprint, cash-drawer kick.
-- [ ] First-launch flow: initial setup wizard completed (v1.0.0: forced owner
-      password change).
+- [ ] First-launch flow: initial setup wizard completed (Owner account,
+      business details, timezone/currency, printer), lands signed in on POS.
 - [ ] Backup created and restored once; app restarted after restore.
